@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block title %}Register{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                <h3 class="mb-0">Register for Agri-SCM</h3>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('register') }}">
+                    <div class="mb-3">
+                        <label for="username" class="form-label">Username</label>
+                        <input type="text" class="form-control" id="username" name="username" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="email" class="form-label">Email</label>
+                        <input type="email" class="form-control" id="email" name="email" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="password" class="form-label">Password</label>
+                        <input type="password" class="form-control" id="password" name="password" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="role" class="form-label">Role</label>
+                        <select class="form-select" id="role" name="role" required>
+                            <option value="farmer">Farmer</option>
+                            <option value="distributor">Distributor</option>
+                            <option value="retailer">Retailer</option>
+                        </select>
+                    </div>
+                    <div class="mb-3" id="farmSizeGroup" style="display: none;">
+                        <label for="farm_size" class="form-label">Farm Size (acres)</label>
+                        <input type="text" class="form-control" id="farm_size" name="farm_size">
+                    </div>
+                    <div class="mb-3">
+                        <label for="location" class="form-label">Location</label>
+                        <input type="text" class="form-control" id="location" name="location" required>
+                    </div>
+                    <button type="submit" class="btn btn-success w-100">Register</button>
+                </form>
+                <div class="mt-3 text-center">
+                    Already have an account? <a href="{{ url_for('login') }}">Login here</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.getElementById('role').addEventListener('change', function() {
+        const farmSizeGroup = document.getElementById('farmSizeGroup');
+        if (this.value === 'farmer') {
+            farmSizeGroup.style.display = 'block';
+        } else {
+            farmSizeGroup.style.display = 'none';
+        }
+    });
+</script>
+{% endblock %}

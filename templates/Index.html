@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block title %}Home{% endblock %}
+
+{% block content %}
+<div class="hero-section text-center py-5 bg-light">
+    <h1 class="display-4">Agricultural Supply Chain Optimization</h1>
+    <p class="lead">Streamlining agricultural production from farm to consumer</p>
+    <div class="mt-4">
+        {% if 'user_id' not in session %}
+            <a href="{{ url_for('register') }}" class="btn btn-success btn-lg mx-2">Register Now</a>
+            <a href="{{ url_for('login') }}" class="btn btn-outline-success btn-lg mx-2">Login</a>
+        {% else %}
+            <a href="{{ url_for('dashboard') }}" class="btn btn-success btn-lg mx-2">Go to Dashboard</a>
+        {% endif %}
+    </div>
+</div>
+
+<div class="row mt-5">
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <h3 class="card-title">Farmers</h3>
+                <p class="card-text">Connect with distributors and retailers to get the best prices for your produce.</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <h3 class="card-title">Distributors</h3>
+                <p class="card-text">Optimize your supply chain and reduce waste with our intelligent routing system.</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <h3 class="card-title">Retailers</h3>
+                <p class="card-text">Get fresh produce directly from farms with our efficient distribution network.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

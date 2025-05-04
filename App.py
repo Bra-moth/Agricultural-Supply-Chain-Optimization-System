@@ -1,5 +1,5 @@
 from flask import Flask, render_template, request, redirect, url_for
-from models import db, Product
+from .models import db, Product  # Use relative import if models.py is in the same directory
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///ascos.db'

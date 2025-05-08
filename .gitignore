@@ -1,0 +1,24 @@
+# Database files
+agricultural_scm.db
+*.db
+*.sqlite
+/instance/
+
+# Virtual environment
+/venv/
+/env/
+/.venv/
+
+# Python cache and generated files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Environment variables
+.env
+.flaskenv
+
+# IDE specific files
+.vscode/
+.idea/

@@ -3,6 +3,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from extensions import db
 from models import User
 
+
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'
 

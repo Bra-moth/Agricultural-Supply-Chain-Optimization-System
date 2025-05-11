@@ -1,0 +1,57 @@
+{% extends "base.html" %} {% block title %}Access Denied | Agri-SCM{% endblock
+%} {% block content %}
+<div class="container">
+  <div class="row justify-content-center">
+    <div class="col-md-8 text-center">
+      <div class="error-container p-5">
+        <div class="error-icon mb-4">
+          <i class="fas fa-ban fa-5x text-danger"></i>
+        </div>
+        <h1 class="display-4 fw-bold mb-3">403 Forbidden</h1>
+        <p class="lead mb-4">You don't have permission to access this page.</p>
+        <div class="d-flex justify-content-center gap-3">
+          <a href="{{ url_for('dashboard') }}" class="btn btn-success btn-lg">
+            <i class="fas fa-tachometer-alt me-2"></i>Return to Dashboard
+          </a>
+          <a
+            href="{{ url_for('logout') }}"
+            class="btn btn-outline-secondary btn-lg"
+          >
+            <i class="fas fa-sign-out-alt me-2"></i>Logout
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  .error-container {
+    margin-top: 100px;
+    margin-bottom: 100px;
+    background-color: #f8f9fa;
+    border-radius: 15px;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
+  }
+
+  .error-icon {
+    animation: bounce 2s infinite;
+  }
+
+  @keyframes bounce {
+    0%,
+    20%,
+    50%,
+    80%,
+    100% {
+      transform: translateY(0);
+    }
+    40% {
+      transform: translateY(-30px);
+    }
+    60% {
+      transform: translateY(-15px);
+    }
+  }
+</style>
+{% endblock %}

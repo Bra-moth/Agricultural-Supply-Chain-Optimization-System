@@ -1,0 +1,84 @@
+{% extends "base.html" %} {% block title %}Produce Sourcing | Agri-SCM{%
+endblock %} {% block content %}
+<div class="container-fluid">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>
+      <i class="fas fa-shopping-basket text-success me-2"></i>Produce Sourcing
+    </h2>
+    <div>
+      <div class="btn-group">
+        <button
+          class="btn btn-success dropdown-toggle"
+          type="button"
+          data-bs-toggle="dropdown"
+        >
+          <i class="fas fa-filter me-2"></i>Filter
+        </button>
+        <ul class="dropdown-menu">
+          <li><a class="dropdown-item" href="#">All Produce</a></li>
+          <li><a class="dropdown-item" href="#">Vegetables</a></li>
+          <li><a class="dropdown-item" href="#">Fruits</a></li>
+          <li><a class="dropdown-item" href="#">Grains</a></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
+    {% for product in products %}
+    <div class="col-md-3 mb-4">
+      <div class="card h-100 shadow-sm">
+        <div class="position-relative">
+          <img
+            src="{{ url_for('static', filename='images/produce/' + product.image) }}"
+            class="card-img-top"
+            alt="{{ product.name }}"
+            style="height: 180px; object-fit: cover"
+          />
+          <span class="position-absolute top-0 end-0 m-2 badge bg-success">
+            {{ product.price }}/kg
+          </span>
+        </div>
+        <div class="card-body">
+          <h5 class="card-title">{{ product.name }}</h5>
+          <p class="card-text text-muted">
+            <i class="fas fa-tractor me-1"></i> {{ product.farmer.username }}<br />
+            <i class="fas fa-map-marker-alt me-1"></i> {{
+            product.farmer.location }}
+          </p>
+          <div class="d-flex justify-content-between align-items-center">
+            <div class="rating">
+              {% for i in range(5) %}
+              <i
+                class="fas fa-star {{ 'text-warning' if i < product.rating else 'text-muted' }}"
+              ></i>
+              {% endfor %}
+            </div>
+            <span class="badge bg-info"
+              >{{ product.quantity }} kg available</span
+            >
+          </div>
+        </div>
+        <div class="card-footer bg-transparent">
+          <div class="d-grid gap-2">
+            <button class="btn btn-success">
+              <i class="fas fa-cart-plus me-2"></i>Add to Order
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% else %}
+    <div class="col-12">
+      <div class="card shadow-sm">
+        <div class="card-body text-center py-5">
+          <i class="fas fa-shopping-basket fa-3x text-muted mb-3"></i>
+          <h5>No produce available</h5>
+          <p class="text-muted">Check back later for fresh farm produce</p>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

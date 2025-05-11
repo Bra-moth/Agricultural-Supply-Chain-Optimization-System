@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, session
+from flask import Flask, render_template, request, redirect, url_for, flash, session, abort
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
 from flask_wtf import FlaskForm
@@ -57,6 +57,17 @@ def login_required(f):
             return redirect(url_for('login'))
         return f(*args, **kwargs)
     return decorated_function
+
+# Role required decorator
+def role_required(role):
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            if session.get('role') != role:
+                abort(403)
+            return f(*args, **kwargs)
+        return decorated_function
+    return decorator
 
 # Create tables
 with app.app_context():
@@ -124,6 +135,7 @@ def dashboard():
 
 @app.route('/crop-inventory')
 @login_required
+@role_required('farmer')
 def crop_inventory():
     user = User.query.get(session['user_id'])
     crops = Crop.query.filter_by(farmer_id=user.id).all()
@@ -146,8 +158,38 @@ def orders():
     orders = Order.query.filter_by(user_id=user.id).all()
     return render_template('orders.html', orders=orders)
 
+@app.route('/order/<int:order_id>')
+@login_required
+def order_detail(order_id):
+    order = Order.query.get_or_404(order_id)
+    if order.user_id != session['user_id']:
+        abort(403)
+    return render_template('order_detail.html', order=order)
+
+@app.route('/supply-routes')
+@login_required
+@role_required('distributor')
+def supply_routes():
+    # Add your supply routes logic here
+    return render_template('supply_routes.html')
+
+@app.route('/farmer-connections')
+@login_required
+@role_required('distributor')
+def farmer_connections():
+    # Add your farmer connections logic here
+    return render_template('farmer_connections.html')
+
+@app.route('/produce-sourcing')
+@login_required
+@role_required('retailer')
+def produce_sourcing():
+    # Add your produce sourcing logic here
+    return render_template('produce_sourcing.html')
+
 @app.route('/add-crop', methods=['GET', 'POST'])
 @login_required
+@role_required('farmer')
 def add_crop():
     user = User.query.get(session['user_id'])
     
@@ -174,6 +216,10 @@ def logout():
     session.clear()
     flash('You have been logged out', 'info')
     return redirect(url_for('index'))
+
+@app.errorhandler(403)
+def forbidden(e):
+    return render_template('403.html'), 403
 
 @app.errorhandler(404)
 def page_not_found(e):

@@ -1,8 +1,8 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, session
 from werkzeug.security import generate_password_hash, check_password_hash
+from datetime import datetime
 from extensions import db
-from models import User
-
+from models import User, Crop, Order
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'
@@ -83,8 +83,65 @@ def dashboard():
     if 'user_id' not in session:
         flash('Please log in to access the dashboard', 'warning')
         return redirect(url_for('login'))
+    
+    user = User.query.get(session['user_id'])
+    return render_template('dashboard.html', user=user)
 
-    return render_template('dashboard.html', user=session)
+@app.route('/crop-inventory')
+def crop_inventory():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    user = User.query.get(session['user_id'])
+    crops = Crop.query.filter_by(farmer_id=user.id).all()
+    return render_template('crop_inventory.html', crops=crops)
+
+@app.route('/market-prices')
+def market_prices():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    # Sample data - replace with real API integration
+    prices = {
+        'Maize': 150,
+        'Wheat': 180,
+        'Potatoes': 25
+    }
+    return render_template('market_prices.html', prices=prices)
+
+@app.route('/orders')
+def orders():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    user = User.query.get(session['user_id'])
+    orders = Order.query.filter_by(user_id=user.id).all()
+    return render_template('orders.html', orders=orders)
+
+@app.route('/add-crop', methods=['GET', 'POST'])
+def add_crop():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    user = User.query.get(session['user_id'])
+    
+    if request.method == 'POST':
+        crop_type = request.form['crop_type']
+        quantity = request.form['quantity']
+        planting_date = datetime.strptime(request.form['planting_date'], '%Y-%m-%d')
+        
+        new_crop = Crop(
+            crop_type=crop_type,
+            quantity=quantity,
+            planting_date=planting_date,
+            farmer_id=user.id
+        )
+        db.session.add(new_crop)
+        db.session.commit()
+        flash('Crop added successfully!', 'success')
+        return redirect(url_for('crop_inventory'))
+    
+    return render_template('add_crop.html')
 
 @app.route('/logout')
 def logout():

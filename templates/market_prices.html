@@ -1,0 +1,24 @@
+{% extends "base.html" %} {% block content %}
+<div class="container mt-4">
+  <h2>Current Market Prices</h2>
+  <table class="table table-striped">
+    <thead>
+      <tr>
+        <th>Commodity</th>
+        <th>Price per kg (ZAR)</th>
+        <th>Weekly Trend</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for commodity, price in prices.items() %}
+      <tr>
+        <td>{{ commodity }}</td>
+        <td>R{{ price }}</td>
+        <td><span class="text-success">↑ 2.5%</span></td>
+        <!-- Sample data -->
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

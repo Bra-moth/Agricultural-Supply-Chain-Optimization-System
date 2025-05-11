@@ -39,6 +39,17 @@
                             <a class="nav-link" href="{{ url_for('register') }}">Register</a>
                         </li>
                     {% endif %}
+                    {% if current_user.is_authenticated %}
+    <li class="nav-item">
+        <a class="nav-link" href="{{ url_for('crop_inventory') }}">Crops</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" href="{{ url_for('market_prices') }}">Market</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" href="{{ url_for('orders') }}">Orders</a>
+    </li>
+{% endif %}
                 </ul>
             </div>
         </div>

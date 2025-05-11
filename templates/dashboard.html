@@ -1,73 +1,72 @@
-{% extends "base.html" %}
-
-{% block title %}Dashboard{% endblock %}
-
-{% block content %}
+{% extends "base.html" %} {% block title %}Dashboard{% endblock %} {% block
+content %}
 <div class="row">
-    <div class="col-md-3">
-        <div class="card">
-            <div class="card-header bg-success text-white">
-                <h5>User Profile</h5>
-            </div>
-            <div class="card-body">
-                <p><strong>Username:</strong> {{ user.username }}</p>
-                <p><strong>Role:</strong> {{ user.role|capitalize }}</p>
-                {% if user.role == 'farmer' %}
-                    <p><strong>Farm Size:</strong> {{ user.farm_size }} acres</p>
-                {% endif %}
-                <p><strong>Location:</strong> {{ user.location }}</p>
-            </div>
-        </div>
+  <div class="col-md-3">
+    <div class="card">
+      <div class="card-header bg-success text-white">
+        <h5>User Profile</h5>
+      </div>
+      <div class="card-body">
+        <p><strong>Username:</strong> {{ user.username }}</p>
+        <p><strong>Role:</strong> {{ user.role|capitalize }}</p>
+        {% if user.role == 'farmer' %}
+        <p><strong>Farm Size:</strong> {{ user.farm_size }} acres</p>
+        {% endif %}
+        <p><strong>Location:</strong> {{ user.location }}</p>
+      </div>
     </div>
-    <div class="col-md-9">
-        <div class="card">
-            <div class="card-header bg-success text-white">
-                <h5>Agricultural Supply Chain Dashboard</h5>
+  </div>
+  <div class="col-md-9">
+    <div class="card">
+      <div class="card-header bg-success text-white">
+        <h5>Agricultural Supply Chain Dashboard</h5>
+      </div>
+      <div class="card-body">
+        {% if user.role == 'farmer' %}
+        <h4>Farmer Dashboard</h4>
+        <p>
+          Manage your crops, view market prices, and connect with distributors.
+        </p>
+        <div class="row mt-4">
+          <div class="col-md-4">
+            <div class="card text-center">
+              <div class="card-body">
+                <h5>Crop Inventory</h5>
+                <p>Manage your current crops</p>
+                <a href="#" class="btn btn-outline-success">View</a>
+              </div>
             </div>
-            <div class="card-body">
-                {% if user.role == 'farmer' %}
-                    <h4>Farmer Dashboard</h4>
-                    <p>Manage your crops, view market prices, and connect with distributors.</p>
-                    <div class="row mt-4">
-                        <div class="col-md-4">
-                            <div class="card text-center">
-                                <div class="card-body">
-                                    <h5>Crop Inventory</h5>
-                                    <p>Manage your current crops</p>
-                                    <a href="#" class="btn btn-outline-success">View</a>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="card text-center">
-                                <div class="card-body">
-                                    <h5>Market Prices</h5>
-                                    <p>Current market rates</p>
-                                    <a href="#" class="btn btn-outline-success">View</a>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="card text-center">
-                                <div class="card-body">
-                                    <h5>Orders</h5>
-                                    <p>View your orders</p>
-                                    <a href="#" class="btn btn-outline-success">View</a>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                {% elif user.role == 'distributor' %}
-                    <h4>Distributor Dashboard</h4>
-                    <p>Optimize your supply routes and manage farmer connections.</p>
-                    <!-- Distributor-specific content -->
-                {% elif user.role == 'retailer' %}
-                    <h4>Retailer Dashboard</h4>
-                    <p>Source fresh produce directly from farmers.</p>
-                    <!-- Retailer-specific content -->
-                {% endif %}
+          </div>
+          <div class="col-md-4">
+            <div class="card text-center">
+              <div class="card-body">
+                <h5>Market Prices</h5>
+                <p>Current market rates</p>
+                <a href="#" class="btn btn-outline-success">View</a>
+              </div>
             </div>
+          </div>
+          <div class="col-md-4">
+            <div class="card text-center">
+              <div class="card-body">
+                <h5>Orders</h5>
+                <p>View your orders</p>
+                <a href="#" class="btn btn-outline-success">View</a>
+              </div>
+            </div>
+          </div>
         </div>
+        {% elif user.role == 'distributor' %}
+        <h4>Distributor Dashboard</h4>
+        <p>Optimize your supply routes and manage farmer connections.</p>
+        <!-- Distributor-specific content -->
+        {% elif user.role == 'retailer' %}
+        <h4>Retailer Dashboard</h4>
+        <p>Source fresh produce directly from farmers.</p>
+        <!-- Retailer-specific content -->
+        {% endif %}
+      </div>
     </div>
+  </div>
 </div>
 {% endblock %}

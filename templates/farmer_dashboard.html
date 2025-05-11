@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+
+{% block title %}Farmer Dashboard{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h2 class="my-4">Farmer Dashboard</h2>
+    
+    <!-- Quick Stats -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card text-white bg-success">
+                <div class="card-body">
+                    <h5 class="card-title">Active Crops</h5>
+                    <p class="card-text display-4">{{ crops|length }}</p>
+                    <a href="{{ url_for('crop_inventory') }}" class="text-white small">View all crops</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card text-white bg-primary">
+                <div class="card-body">
+                    <h5 class="card-title">Pending Orders</h5>
+                    <p class="card-text display-4">{{ orders|length }}</p>
+                    <a href="{{ url_for('orders') }}" class="text-white small">View all orders</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card text-white bg-info">
+                <div class="card-body">
+                    <h5 class="card-title">Market Prices</h5>
+                    <p class="card-text">Latest updates</p>
+                    <a href="{{ url_for('market_prices') }}" class="text-white small">View prices</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Crop Management -->
+    <div class="card mb-4">
+        <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+            <h4 class="mb-0">My Crops</h4>
+            <a href="{{ url_for('add_crop') }}" class="btn btn-light btn-sm">
+                <i class="bi bi-plus-circle"></i> Add New Crop
+            </a>
+        </div>
+        <div class="card-body">
+            {% if crops %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Crop Type</th>
+                            <th>Quantity</th>
+                            <th>Planted On</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for crop in crops %}
+                        <tr>
+                            <td>{{ crop.crop_type }}</td>
+                            <td>{{ crop.quantity }} kg</td>
+                            <td>{{ crop.planting_date.strftime('%Y-%m-%d') }}</td>
+                            <td>
+                                <span class="badge bg-success">Active</span>
+                            </td>
+                            <td>
+                                <div class="btn-group" role="group">
+                                    <a href="{{ url_for('edit_crop', crop_id=crop.id) }}" class="btn btn-sm btn-outline-primary">
+                                        <i class="bi bi-pencil"></i> Edit
+                                    </a>
+                                    <a href="{{ url_for('delete_crop', crop_id=crop.id) }}" class="btn btn-sm btn-outline-danger">
+                                        <i class="bi bi-trash"></i> Delete
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="alert alert-info">
+                No crops found. <a href="{{ url_for('add_crop') }}" class="alert-link">Add your first crop</a> to get started.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Orders Section -->
+    <div class="card">
+        <div class="card-header bg-primary text-white">
+            <h4>Recent Orders</h4>
+        </div>
+        <div class="card-body">
+            {% if orders %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Order ID</th>
+                            <th>Crop</th>
+                            <th>Quantity</th>
+                            <th>Buyer</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for order in orders %}
+                        <tr>
+                            <td>#{{ order.id }}</td>
+                            <td>{{ order.crop.crop_type }}</td>
+                            <td>{{ order.quantity }} kg</td>
+                            <td>{{ order.buyer.username }} ({{ order.buyer.role|title }})</td>
+                            <td>
+                                {% if order.status == 'pending' %}
+                                <span class="badge bg-warning text-dark">Pending</span>
+                                {% elif order.status == 'shipped' %}
+                                <span class="badge bg-info">Shipped</span>
+                                {% elif order.status == 'delivered' %}
+                                <span class="badge bg-success">Delivered</span>
+                                {% else %}
+                                <span class="badge bg-secondary">{{ order.status|title }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="{{ url_for('order_detail', order_id=order.id) }}" class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-eye"></i> View
+                                </a>
+                                {% if order.status == 'pending' %}
+                                <a href="{{ url_for('update_order_status', order_id=order.id, status='shipped') }}" class="btn btn-sm btn-outline-success">
+                                    <i class="bi bi-check-circle"></i> Ship
+                                </a>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="alert alert-info">
+                No recent orders. When you receive orders, they'll appear here.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

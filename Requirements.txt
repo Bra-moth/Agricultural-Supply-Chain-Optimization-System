@@ -1,8 +1,7 @@
-Flask==2.3.2
+# This is a requirements file for a Python project using Flask and SQLAlchemy.
 Flask-SQLAlchemy==3.0.3
 Werkzeug==2.3.6
 python-dotenv==1.0.0
-
 alembic==1.15.2 
 blinker==1.9.0  
 click==8.1.8  
@@ -30,3 +29,4 @@ SQLAlchemy==2.0.40
 typing_extensions==4.13.2
 Werkzeug==2.3.7
 WTForms==3.1.1
+email_validator==2.2.0

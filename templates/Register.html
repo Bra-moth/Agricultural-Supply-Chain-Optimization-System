@@ -1,5 +1,8 @@
-{% extends "base.html" %} {% block title %}Register{% endblock %} {% block
-content %}
+{% extends "base.html" %}
+
+{% block title %}Register{% endblock %}
+
+{% block content %}
 <div class="row justify-content-center">
   <div class="col-md-6">
     <div class="card">
@@ -8,84 +11,58 @@ content %}
       </div>
       <div class="card-body">
         <form method="POST" action="{{ url_for('register') }}">
-            {{form}}
+          {{ form.hidden_tag() }}  <!-- CSRF Token - REQUIRED -->
+          
           <div class="mb-3">
-            <label for="username" class="form-label">Username</label>
-            <input
-              type="text"
-              class="form-control"
-              id="username"
-              name="username"
-              required
-            />
-            {% if form.username.errors %}
+            {{ form.username.label(class="form-label") }}
+            {{ form.username(class="form-control" + (" is-invalid" if form.username.errors else "")) }}
+            {% for error in form.username.errors %}
             <div class="invalid-feedback">
-              {% for error in form.username.errors %} {{ error }} {% endfor %}
+              {{ error }}
             </div>
-            {% endif %}
+            {% endfor %}
           </div>
+
           <div class="mb-3">
-            <label for="email" class="form-label">Email</label>
-            <input
-              type="email"
-              class="form-control"
-              id="email"
-              name="email"
-              required
-            />
-            {% if form.email.errors %}
+            {{ form.email.label(class="form-label") }}
+            {{ form.email(class="form-control" + (" is-invalid" if form.email.errors else "")) }}
+            {% for error in form.email.errors %}
             <div class="invalid-feedback">
-              {% for error in form.email.errors %} {{ error }} {% endfor %}
+              {{ error }}
             </div>
-            {% endif %}
+            {% endfor %}
           </div>
+
           <div class="mb-3">
-            <label for="password" class="form-label">Password</label>
-            <input
-              type="password"
-              class="form-control"
-              id="password"
-              name="password"
-              required
-            />
-            {% if form.password.errors %}
+            {{ form.password.label(class="form-label") }}
+            {{ form.password(class="form-control" + (" is-invalid" if form.password.errors else "")) }}
+            {% for error in form.password.errors %}
             <div class="invalid-feedback">
-              {% for error in form.password.errors %} {{ error }} {% endfor %}
+              {{ error }}
             </div>
-            {% endif %}
+            {% endfor %}
           </div>
+
           <div class="mb-3">
-            <label for="role" class="form-label">Role</label>
-            <select class="form-select" id="role" name="role" required>
-              <option value="farmer">Farmer</option>
-              <option value="distributor">Distributor</option>
-              <option value="retailer">Retailer</option>
-            </select>
+            {{ form.role.label(class="form-label") }}
+            {{ form.role(class="form-select") }}
           </div>
+
           <div class="mb-3" id="farmSizeGroup" style="display: none">
-            <label for="farm_size" class="form-label">Farm Size (acres)</label>
-            <input
-              type="text"
-              class="form-control"
-              id="farm_size"
-              name="farm_size"
-            />
+            {{ form.farm_size.label(class="form-label") }}
+            {{ form.farm_size(class="form-control") }}
           </div>
+
           <div class="mb-3">
-            <label for="location" class="form-label">Location</label>
-            <input
-              type="text"
-              class="form-control"
-              id="location"
-              name="location"
-              required
-            />
-            {% if form.location.errors %}
+            {{ form.location.label(class="form-label") }}
+            {{ form.location(class="form-control" + (" is-invalid" if form.location.errors else "")) }}
+            {% for error in form.location.errors %}
             <div class="invalid-feedback">
-              {% for error in form.location.errors %} {{ error }} {% endfor %}
+              {{ error }}
             </div>
-            {% endif %}
+            {% endfor %}
           </div>
+
           <button type="submit" class="btn btn-success w-100">Register</button>
         </form>
         <div class="mt-3 text-center">
@@ -106,5 +83,8 @@ content %}
       farmSizeGroup.style.display = "none";
     }
   });
+  
+  // Trigger change event on page load in case farmer is preselected
+  document.getElementById("role").dispatchEvent(new Event('change'));
 </script>
 {% endblock %}

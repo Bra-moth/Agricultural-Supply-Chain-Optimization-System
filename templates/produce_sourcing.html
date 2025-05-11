@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Produce Sourcing{% endblock %}
+{% block content %}
+<section id="produce-sourcing" class="py-5">
+  <div class="container">
+    <h2 class="text-center mb-4">Produce Sourcing</h2>
+    <p class="text-center">Find and source fresh produce from local farmers.</p>
+    {% if current_user.is_authenticated %}
+    <div class="text-center">
+      <a href="{{ url_for('produce_sourcing') }}" class="btn btn-success">View Sourcing Options</a>
+    </div>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

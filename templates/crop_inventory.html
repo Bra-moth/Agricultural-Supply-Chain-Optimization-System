@@ -1,31 +1,15 @@
-{% extends "base.html" %} {% block content %}
-<div class="container mt-4">
-  <h2>Crop Inventory</h2>
-  <a href="{{ url_for('add_crop') }}" class="btn btn-success mb-3"
-    >Add New Crop</a
-  >
-  <table class="table table-striped">
-    <thead>
-      <tr>
-        <th>Crop Type</th>
-        <th>Quantity (kg)</th>
-        <th>Planting Date</th>
-        <th>Actions</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for crop in crops %}
-      <tr>
-        <td>{{ crop.crop_type }}</td>
-        <td>{{ crop.quantity }}</td>
-        <td>{{ crop.planting_date }}</td>
-        <td>
-          <a href="#" class="btn btn-sm btn-warning">Edit</a>
-          <a href="#" class="btn btn-sm btn-danger">Delete</a>
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-</div>
+{% extends "base.html" %}
+{% block title %}Crop Inventory{% endblock %}
+{% block content %}
+<section id="crop-inventory" class="py-5">
+  <div class="container">
+    <h2 class="text-center mb-4">Crop Inventory</h2>
+    <p class="text-center">Manage your crop inventory and details.</p>
+    {% if current_user.is_authenticated %}
+    <div class="text-center">
+      <a href="{{ url_for('crop_inventory') }}" class="btn btn-success">Manage Crops</a>
+    </div>
+    {% endif %}
+  </div>
+</section>
 {% endblock %}

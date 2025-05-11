@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Supply Routes{% endblock %}
+{% block content %}
+<section id="supply-routes" class="py-5 bg-light">
+  <div class="container">
+    <h2 class="text-center mb-4">Supply Routes</h2>
+    <p class="text-center">Optimize your supply chain and reduce waste with our intelligent routing system.</p>
+    {% if current_user.is_authenticated %}
+    <div class="text-center">
+      <a href="{{ url_for('supply_routes') }}" class="btn btn-success">View Routes</a>
+    </div>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

@@ -1,4 +1,88 @@
-{% extends "base.html" %} {% block content %}
+{% extends "base.html" %} 
+{% block content %}
+<div class="container mt-4">
+  <h2>Your Orders</h2>
+  <table class="table table-striped">
+    <thead>
+      <tr>
+        <th>Order ID</th>
+        <th>Product</th>
+        <th>Quantity</th>
+        <th>Status</th>
+        <th>Order Date</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for order in orders %}
+      <tr>
+        <td>{{ order.id }}</td>
+        <td>{{ order.product }}</td>
+        <td>{{ order.quantity }} kg</td>
+        <td>
+          <span
+            class="badge bg-{{ 'success' if order.status == 'Delivered' else 'warning' }}"
+          >
+            {{ order.status }}
+          </span>
+        </td>
+        <td>{{ order.order_date.strftime('%Y-%m-%d') }}</td>
+        <td>
+          <a href="{% url 'order_detail' order.id %}" class="btn btn-sm btn-primary">View</a>
+          {% if order.status != 'Delivered' %}
+          <a href="{% url 'cancel_order' order.id %}" class="btn btn-sm btn-danger">Cancel</a>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}{% extends "base.html" %} 
+{% block content %}
+<div class="container mt-4">
+  <h2>Your Orders</h2>
+  <table class="table table-striped">
+    <thead>
+      <tr>
+        <th>Order ID</th>
+        <th>Product</th>
+        <th>Quantity</th>
+        <th>Status</th>
+        <th>Order Date</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for order in orders %}
+      <tr>
+        <td>{{ order.id }}</td>
+        <td>{{ order.product }}</td>
+        <td>{{ order.quantity }} kg</td>
+        <td>
+          <span
+            class="badge bg-{{ 'success' if order.status == 'Delivered' else 'warning' }}"
+          >
+            {{ order.status }}
+          </span>
+        </td>
+        <td>{{ order.order_date.strftime('%Y-%m-%d') }}</td>
+        <td>
+          <a href="{% url 'order_detail' order.id %}" class="btn btn-sm btn-primary">View</a>
+          {% if order.status != 'Delivered' %}
+          <a href="{% url 'cancel_order' order.id %}" class="btn btn-sm btn-danger">Cancel</a>
+          {% endif %}
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="6" class="text-center">No orders found.</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}{% extends "base.html" %} {% block content %}
 <div class="container mt-4">
   <h2>Your Orders</h2>
   <table class="table table-striped">

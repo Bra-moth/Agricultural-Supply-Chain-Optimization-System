@@ -1,168 +1,45 @@
-{% extends "base.html" %} {% block title %}Home{% endblock %} {% block content
-%}
-<div class="sticky-top bg-white shadow-sm py-2">
-  <div class="container">
-    <ul class="nav nav-pills justify-content-center">
-      <li class="nav-item">
-        <a class="nav-link" href="#dashboard">Dashboard</a>
-      </li>
-      <li class="nav-item">
-        <a class="nav-link" href="#orders">Orders</a>
-      </li>
-      <li class="nav-item">
-        <a class="nav-link" href="#crops">Crops</a>
-      </li>
-      <li class="nav-item">
-        <a class="nav-link" href="#market">Market</a>
-      </li>
-      <li class="nav-item">
-        <a class="nav-link" href="#farmers">Farmers</a>
-      </li>
-      {% if not current_user.is_authenticated %}
-      <li class="nav-item">
-        <a class="nav-link" href="{{ url_for('login') }}">Login</a>
-      </li>
-      <li class="nav-item">
-        <a class="nav-link" href="{{ url_for('register') }}">Register</a>
-      </li>
-      {% endif %}
-    </ul>
-  </div>
-</div>
+{% extends "base.html" %}
 
+{% block title %}Home{% endblock %}
+
+{% block content %}
 <div class="hero-section text-center py-5 bg-light">
-  <h1 class="display-4">Agricultural Supply Chain Optimization</h1>
-  <p class="lead">Streamlining agricultural production from farm to consumer</p>
-  <div class="mt-4">
-    {% if 'user_id' not in session %}
-    <a href="{{ url_for('register') }}" class="btn btn-success btn-lg mx-2">Register Now</a>
-    <a href="{{ url_for('login') }}" class="btn btn-outline-success btn-lg mx-2">Login</a>
-    {% else %}
-    <a href="#dashboard" class="btn btn-success btn-lg mx-2">Go to Dashboard</a>
-    {% endif %}
-  </div>
+    <h1 class="display-4">Agricultural Supply Chain Optimization</h1>
+    <p class="lead">Streamlining agricultural production from farm to consumer</p>
+    <div class="mt-4">
+        {% if 'user_id' not in session %}
+            <a href="{{ url_for('register') }}" class="btn btn-success btn-lg mx-2">Register Now</a>
+            <a href="{{ url_for('login') }}" class="btn btn-outline-success btn-lg mx-2">Login</a>
+        {% else %}
+            <a href="{{ url_for('dashboard') }}" class="btn btn-success btn-lg mx-2">Go to Dashboard</a>
+        {% endif %}
+    </div>
 </div>
 
-<section id="dashboard" class="py-5">
-  <div class="container">
-    <h2 class="text-center mb-4">Dashboard</h2>
-    <div class="row">
-      <div class="col-md-4 mb-4">
+<div class="row mt-5">
+    <div class="col-md-4">
         <div class="card h-100">
-          <div class="card-body">
-            <h3 class="card-title">Farmers</h3>
-            <p class="card-text">
-              Connect with distributors and retailers to get the best prices for
-              your produce.
-            </p>
-            {% if current_user.is_authenticated %}
-            <a href="#crops" class="btn btn-outline-success mt-2">Manage Crops</a>
-            {% endif %}
-          </div>
+            <div class="card-body">
+                <h3 class="card-title">Farmers</h3>
+                <p class="card-text">Connect with distributors and retailers to get the best prices for your produce.</p>
+            </div>
         </div>
-      </div>
-      <div class="col-md-4 mb-4">
+    </div>
+    <div class="col-md-4">
         <div class="card h-100">
-          <div class="card-body">
-            <h3 class="card-title">Distributors</h3>
-            <p class="card-text">
-              Optimize your supply chain and reduce waste with our intelligent
-              routing system.
-            </p>
-            {% if current_user.is_authenticated %}
-            <a href="#market" class="btn btn-outline-success mt-2">View Market</a>
-            {% endif %}
-          </div>
+            <div class="card-body">
+                <h3 class="card-title">Distributors</h3>
+                <p class="card-text">Optimize your supply chain and reduce waste with our intelligent routing system.</p>
+            </div>
         </div>
-      </div>
-      <div class="col-md-4 mb-4">
+    </div>
+    <div class="col-md-4">
         <div class="card h-100">
-          <div class="card-body">
-            <h3 class="card-title">Retailers</h3>
-            <p class="card-text">
-              Get fresh produce directly from farms with our efficient
-              distribution network.
-            </p>
-            {% if current_user.is_authenticated %}
-            <a href="#orders" class="btn btn-outline-success mt-2">View Orders</a>
-            {% endif %}
-          </div>
+            <div class="card-body">
+                <h3 class="card-title">Retailers</h3>
+                <p class="card-text">Get fresh produce directly from farms with our efficient distribution network.</p>
+            </div>
         </div>
-      </div>
     </div>
-  </div>
-</section>
-
-<section id="orders" class="py-5 bg-light">
-  <div class="container">
-    <h2 class="text-center mb-4">Orders</h2>
-    <p class="text-center">Manage and track your orders here.</p>
-    {% if current_user.is_authenticated %}
-    <div class="text-center">
-      <a href="{{ url_for('orders') }}" class="btn btn-success">View Orders</a>
-    </div>
-    {% endif %}
-  </div>
-</section>
-
-<section id="crops" class="py-5">
-  <div class="container">
-    <h2 class="text-center mb-4">Crops</h2>
-    <p class="text-center">Manage your crop inventory and details.</p>
-    {% if current_user.is_authenticated %}
-    <div class="text-center">
-      <a href="{{ url_for('crop_inventory') }}" class="btn btn-success">Manage Crops</a>
-    </div>
-    {% endif %}
-  </div>
-</section>
-
-<section id="market" class="py-5 bg-light">
-  <div class="container">
-    <h2 class="text-center mb-4">Market</h2>
-    <p class="text-center">Check current market prices and trends.</p>
-    {% if current_user.is_authenticated %}
-    <div class="text-center">
-      <a href="{{ url_for('market_prices') }}" class="btn btn-success">View Market</a>
-    </div>
-    {% endif %}
-  </div>
-</section>
-
-<section id="farmers" class="py-5">
-  <div class="container">
-    <h2 class="text-center mb-4">Farmer Connections</h2>
-    <p class="text-center">Connect with farmers and manage relationships.</p>
-    {% if current_user.is_authenticated %}
-    <div class="text-center">
-      <a href="{{ url_for('farmer_connections') }}" class="btn btn-success">View Connections</a>
-    </div>
-    {% endif %}
-  </div>
-</section>
+</div>
 {% endblock %}
-
-<script>
-  document.addEventListener('DOMContentLoaded', function () {
-    const sections = document.querySelectorAll('section');
-    const navLinks = document.querySelectorAll('.nav-link');
-
-    window.addEventListener('scroll', function () {
-      let current = '';
-      sections.forEach(section => {
-        const sectionTop = section.offsetTop;
-        const sectionHeight = section.clientHeight;
-        if (pageYOffset >= (sectionTop - sectionHeight / 3)) {
-          current = section.getAttribute('id');
-        }
-      });
-
-      navLinks.forEach(link => {
-        link.classList.remove('active');
-        if (link.getAttribute('href').substring(1) === current) {
-          link.classList.add('active');
-        }
-      });
-    });
-  });
-</script>

@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% comment %}  {% endcomment %}{% extends "base.html" %}
 {% block title %}Order #{{ order.id }} | Agri-SCM{% endblock %}
 
 {% block content %}
@@ -45,8 +45,11 @@
                 <tr>
                   <td>
                     <div class="d-flex align-items-center">
-                      <img src="{{ url_for('static', filename='images/produce/' + item.product.image) }}"
-                        class="rounded me-3" width="60" height="60" style="object-fit: cover;">
+                      <img src="{{ url_for('static', filename='images/produce/' + item.product.image) }}"z
+                           class="rounded me-3" 
+                           width="60" 
+                           height="60" 
+                           style="object-fit: cover;">
                       <div>
                         <h6 class="mb-0">{{ item.product.name }}</h6>
                         <small class="text-muted">{{ item.product.farmer.username }}</small>
@@ -103,8 +106,12 @@
           <hr>
           <h6>Delivery Status</h6>
           <div class="progress mt-3">
-            <div class="progress-bar bg-success" role="progressbar" style="width: {{ order.status_percentage }}%"
-              aria-valuenow="{{ order.status_percentage }}" aria-valuemin="0" aria-valuemax="100">
+            <div class="progress-bar bg-success" 
+                 role="progressbar" 
+                 style="width: {{ order.status_percentage }}%"
+                 aria-valuenow="{{ order.status_percentage }}" 
+                 aria-valuemin="0" 
+                 aria-valuemax="100">
             </div>
           </div>
           <div class="mt-2 text-muted small">

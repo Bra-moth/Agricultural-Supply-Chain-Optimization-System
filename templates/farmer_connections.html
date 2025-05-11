@@ -1,12 +1,10 @@
-{% extends "base.html" %}
-{% block title %}Farmer Connections | Agri-SCM{% endblock %}
-
-{% block content %}
+{% extends "base.html" %} {% block title %}Farmer Connections | Agri-SCM{%
+endblock %} {% block content %}
 <div class="container-fluid">
   <div class="d-flex justify-content-between align-items-center mb-4">
     <h2><i class="fas fa-users text-success me-2"></i>Farmer Connections</h2>
-    <div class="input-group" style="width: 300px;">
-      <input type="text" class="form-control" placeholder="Search farmers...">
+    <div class="input-group" style="width: 300px">
+      <input type="text" class="form-control" placeholder="Search farmers..." />
       <button class="btn btn-success" type="button">
         <i class="fas fa-search"></i>
       </button>
@@ -14,7 +12,7 @@
   </div>
 
   <div class="row">
-    {% for farmer in farmers %}
+    {% if farmers %} {% for farmer in farmers %}
     <div class="col-md-4 mb-4">
       <div class="card h-100 shadow-sm">
         <div class="card-header bg-success text-white">
@@ -28,8 +26,12 @@
               </div>
             </div>
             <div class="flex-grow-1 ms-3">
-              <p class="mb-1"><i class="fas fa-map-marker-alt me-2"></i>{{ farmer.location }}</p>
-              <p class="mb-1"><i class="fas fa-tractor me-2"></i>{{ farmer.farm_size }} acres</p>
+              <p class="mb-1">
+                <i class="fas fa-map-marker-alt me-2"></i>{{ farmer.location }}
+              </p>
+              <p class="mb-1">
+                <i class="fas fa-tractor me-2"></i>{{ farmer.farm_size }} acres
+              </p>
             </div>
           </div>
           <div class="d-flex justify-content-between">
@@ -52,10 +54,19 @@
         </div>
       </div>
     </div>
-    {% else %}
+    {% endfor %} {% else %}
     <div class="col-12">
       <div class="card shadow-sm">
         <div class="card-body text-center py-5">
           <i class="fas fa-users fa-3x text-muted mb-3"></i>
           <h5>No farmer connections yet</h5>
-          <p class
+          <p class="text-muted">
+            Try connecting with local producers or updating your preferences.
+          </p>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

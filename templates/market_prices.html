@@ -1,24 +1,15 @@
-{% extends "base.html" %} {% block content %}
-<div class="container mt-4">
-  <h2>Current Market Prices</h2>
-  <table class="table table-striped">
-    <thead>
-      <tr>
-        <th>Commodity</th>
-        <th>Price per kg (ZAR)</th>
-        <th>Weekly Trend</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for commodity, price in prices.items() %}
-      <tr>
-        <td>{{ commodity }}</td>
-        <td>R{{ price }}</td>
-        <td><span class="text-success">↑ 2.5%</span></td>
-        <!-- Sample data -->
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-</div>
+{% extends "base.html" %}
+{% block title %}Market Prices{% endblock %}
+{% block content %}
+<section id="market-prices" class="py-5">
+  <div class="container">
+    <h2 class="text-center mb-4">Market Prices</h2>
+    <p class="text-center">Check current market prices and trends.</p>
+    {% if current_user.is_authenticated %}
+    <div class="text-center">
+      <a href="{{ url_for('market_prices') }}" class="btn btn-success">View Market</a>
+    </div>
+    {% endif %}
+  </div>
+</section>
 {% endblock %}

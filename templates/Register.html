@@ -1,76 +1,84 @@
 {% extends "base.html" %} {% block title %}Register{% endblock %} {% block
 content %}
-<div class="row justify-content-center">
-  <div class="col-md-6">
-    <div class="card">
-      <div class="card-header bg-success text-white">
-        <h3 class="mb-0">Register for Agri-SCM</h3>
-      </div>
-      <div class="card-body">
-        <form method="POST" action="{{ url_for('register') }}">
-          {{ form.hidden_tag() }}
+<section id="register" class="py-5 bg-light">
+  <div class="container">
+    <h2 class="text-center mb-4">Register</h2>
+    <p class="text-center">Create a new account to get started.</p>
+    <div class="row justify-content-center">
+      <div class="col-md-6">
+        <div class="card">
+          <div class="card-header bg-success text-white">
+            <h3 class="mb-0">Register for Agri-SCM</h3>
+          </div>
+          <div class="card-body">
+            <form method="POST" action="{{ url_for('register') }}">
+              {{ form.hidden_tag() }}
 
-          <div class="mb-3">
-            {{ form.username.label(class="form-label") }} {{
-            form.username(class="form-control" + (" is-invalid" if
-            form.username.errors else "")) }} {% if form.username.errors %}
-            <div class="invalid-feedback">
-              {% for error in form.username.errors %} {{ error }} {% endfor %}
+              <div class="mb-3">
+                {{ form.username.label(class="form-label") }} {{
+                form.username(class="form-control" + (" is-invalid" if
+                form.username.errors else "")) }} {% if form.username.errors %}
+                <div class="invalid-feedback">
+                  {% for error in form.username.errors %} {{ error }} {% endfor %}
+                </div>
+                {% endif %}
+              </div>
+
+              <div class="mb-3">
+                {{ form.email.label(class="form-label") }} {{
+                form.email(class="form-control" + (" is-invalid" if
+                form.email.errors else "")) }} {% if form.email.errors %}
+                <div class="invalid-feedback">
+                  {% for error in form.email.errors %} {{ error }} {% endfor %}
+                </div>
+                {% endif %}
+              </div>
+
+              <div class="mb-3">
+                {{ form.password.label(class="form-label") }} {{
+                form.password(class="form-control" + (" is-invalid" if
+                form.password.errors else "")) }} {% if form.password.errors %}
+                <div class="invalid-feedback">
+                  {% for error in form.password.errors %} {{ error }} {% endfor %}
+                </div>
+                {% endif %}
+              </div>
+
+              <div class="mb-3">
+                {{ form.role.label(class="form-label") }} {{
+                form.role(class="form-select") }}
+              </div>
+
+              <div class="mb-3" id="farmSizeGroup" style="display: none">
+                {{ form.farm_size.label(class="form-label") }} {{
+                form.farm_size(class="form-control") }}
+              </div>
+
+              <div class="mb-3">
+                {{ form.location.label(class="form-label") }} {{
+                form.location(class="form-control" + (" is-invalid" if
+                form.location.errors else "")) }} {% if form.location.errors %}
+                <div class="invalid-feedback">
+                  {% for error in form.location.errors %} {{ error }} {% endfor %}
+                </div>
+                {% endif %}
+              </div>
+
+              <div class="d-grid">
+                <button type="submit" class="btn btn-success">Register</button>
+              </div>
+            </form>
+
+            <div class="mt-3 text-center">
+              Already have an account?
+              <a href="{{ url_for('login') }}">Login here</a>
             </div>
-            {% endif %}
           </div>
-
-          <div class="mb-3">
-            {{ form.email.label(class="form-label") }} {{
-            form.email(class="form-control" + (" is-invalid" if
-            form.email.errors else "")) }} {% if form.email.errors %}
-            <div class="invalid-feedback">
-              {% for error in form.email.errors %} {{ error }} {% endfor %}
-            </div>
-            {% endif %}
-          </div>
-
-          <div class="mb-3">
-            {{ form.password.label(class="form-label") }} {{
-            form.password(class="form-control" + (" is-invalid" if
-            form.password.errors else "")) }} {% if form.password.errors %}
-            <div class="invalid-feedback">
-              {% for error in form.password.errors %} {{ error }} {% endfor %}
-            </div>
-            {% endif %}
-          </div>
-
-          <div class="mb-3">
-            {{ form.role.label(class="form-label") }} {{
-            form.role(class="form-select") }}
-          </div>
-
-          <div class="mb-3" id="farmSizeGroup" style="display: none">
-            {{ form.farm_size.label(class="form-label") }} {{
-            form.farm_size(class="form-control") }}
-          </div>
-
-          <div class="mb-3">
-            {{ form.location.label(class="form-label") }} {{
-            form.location(class="form-control" + (" is-invalid" if
-            form.location.errors else "")) }} {% if form.location.errors %}
-            <div class="invalid-feedback">
-              {% for error in form.location.errors %} {{ error }} {% endfor %}
-            </div>
-            {% endif %}
-          </div>
-
-          <button type="submit" class="btn btn-success w-100">Register</button>
-        </form>
-
-        <div class="mt-3 text-center">
-          Already have an account?
-          <a href="{{ url_for('login') }}">Login here</a>
         </div>
       </div>
     </div>
   </div>
-</div>
+</section>
 
 <script>
   document.getElementById("role").addEventListener("change", function () {

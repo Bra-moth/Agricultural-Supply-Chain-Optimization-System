@@ -1,0 +1,306 @@
+{% extends "base.html" %} {% block title %}Track Order - Agricultural SCM{%
+endblock %} {% block content %}
+<div class="container py-5">
+  <!-- Order Search Section -->
+  <div class="row mb-5">
+    <div class="col-md-8 mx-auto">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body p-4">
+          <h4 class="text-center mb-4">Track Your Order</h4>
+          <form class="d-flex gap-2">
+            <input
+              type="text"
+              class="form-control form-control-lg"
+              placeholder="Enter Order ID"
+              required
+            />
+            <button type="submit" class="btn btn-success btn-lg px-4">
+              Track
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Order Details -->
+  {% if order %}
+  <div class="row">
+    <div class="col-lg-8">
+      <!-- Order Status Timeline -->
+      <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body p-4">
+          <div class="d-flex justify-content-between align-items-center mb-4">
+            <h5 class="mb-0">Order Status</h5>
+            <span class="badge bg-success">{{ order.status }}</span>
+          </div>
+          <div class="position-relative tracking-timeline">
+            <div class="progress" style="height: 2px">
+              <div
+                class="progress-bar bg-success"
+                role="progressbar"
+                style="width: {{ order.progress }}%"
+              ></div>
+            </div>
+            <div class="tracking-steps">
+              <div
+                class="tracking-step {% if order.progress >= 0 %}active{% endif %}"
+              >
+                <div class="tracking-icon">
+                  <i class="bi bi-cart-check"></i>
+                </div>
+                <div class="tracking-label">Order Placed</div>
+                <div class="tracking-date">{{ order.order_date }}</div>
+              </div>
+              <div
+                class="tracking-step {% if order.progress >= 25 %}active{% endif %}"
+              >
+                <div class="tracking-icon">
+                  <i class="bi bi-box-seam"></i>
+                </div>
+                <div class="tracking-label">Processing</div>
+                <div class="tracking-date">{{ order.processing_date }}</div>
+              </div>
+              <div
+                class="tracking-step {% if order.progress >= 50 %}active{% endif %}"
+              >
+                <div class="tracking-icon">
+                  <i class="bi bi-truck"></i>
+                </div>
+                <div class="tracking-label">In Transit</div>
+                <div class="tracking-date">{{ order.shipping_date }}</div>
+              </div>
+              <div
+                class="tracking-step {% if order.progress >= 100 %}active{% endif %}"
+              >
+                <div class="tracking-icon">
+                  <i class="bi bi-house-check"></i>
+                </div>
+                <div class="tracking-label">Delivered</div>
+                <div class="tracking-date">{{ order.delivery_date }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Order Details Card -->
+      <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body p-4">
+          <h5 class="mb-4">Order Details</h5>
+          <div class="row g-3">
+            <div class="col-sm-6">
+              <div class="detail-item">
+                <div class="text-muted small">Order ID</div>
+                <div class="fw-bold">#{{ order.id }}</div>
+              </div>
+            </div>
+            <div class="col-sm-6">
+              <div class="detail-item">
+                <div class="text-muted small">Order Date</div>
+                <div class="fw-bold">{{ order.order_date }}</div>
+              </div>
+            </div>
+            <div class="col-sm-6">
+              <div class="detail-item">
+                <div class="text-muted small">Expected Delivery</div>
+                <div class="fw-bold">{{ order.expected_delivery }}</div>
+              </div>
+            </div>
+            <div class="col-sm-6">
+              <div class="detail-item">
+                <div class="text-muted small">Total Amount</div>
+                <div class="fw-bold">R{{ order.total_amount }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Order Items -->
+      <div class="card border-0 shadow-sm">
+        <div class="card-body p-4">
+          <h5 class="mb-4">Order Items</h5>
+          <div class="table-responsive">
+            <table class="table table-hover align-middle">
+              <thead class="table-light">
+                <tr>
+                  <th>Product</th>
+                  <th>Quantity</th>
+                  <th>Price</th>
+                  <th>Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for item in order.items %}
+                <tr>
+                  <td>
+                    <div class="d-flex align-items-center">
+                      {% if item.image %}
+                      <img
+                        src="{{ item.image }}"
+                        alt="{{ item.name }}"
+                        class="rounded me-3"
+                        width="50"
+                      />
+                      {% endif %}
+                      <div>
+                        <div class="fw-bold">{{ item.name }}</div>
+                        <div class="text-muted small">{{ item.category }}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td>{{ item.quantity }} {{ item.unit }}</td>
+                  <td>R{{ item.price }}</td>
+                  <td>R{{ item.total }}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+              <tfoot class="table-light">
+                <tr>
+                  <td colspan="3" class="text-end fw-bold">Total:</td>
+                  <td class="fw-bold">R{{ order.total_amount }}</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-4">
+      <!-- Shipping Details -->
+      <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body p-4">
+          <h5 class="mb-4">Shipping Details</h5>
+          <div class="shipping-info">
+            <div class="mb-3">
+              <div class="text-muted small">Delivery Address</div>
+              <div class="fw-bold">{{ order.shipping_address.name }}</div>
+              <div>{{ order.shipping_address.street }}</div>
+              <div>
+                {{ order.shipping_address.city }}, {{
+                order.shipping_address.province }}
+              </div>
+              <div>{{ order.shipping_address.postal_code }}</div>
+            </div>
+            <div class="mb-3">
+              <div class="text-muted small">Contact</div>
+              <div>{{ order.shipping_address.phone }}</div>
+              <div>{{ order.shipping_address.email }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Support Card -->
+      <div class="card border-0 shadow-sm">
+        <div class="card-body p-4">
+          <h5 class="mb-4">Need Help?</h5>
+          <div class="d-grid gap-2">
+            <a href="#" class="btn btn-outline-success">
+              <i class="bi bi-chat-dots me-2"></i>Chat with Support
+            </a>
+            <a href="#" class="btn btn-outline-success">
+              <i class="bi bi-telephone me-2"></i>Call Support
+            </a>
+            <a href="#" class="btn btn-outline-success">
+              <i class="bi bi-envelope me-2"></i>Email Support
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %} {% block styles %}
+<style>
+  /* Order Tracking Styles */
+  .tracking-timeline {
+    padding: 2rem 0;
+  }
+
+  .tracking-steps {
+    display: flex;
+    justify-content: space-between;
+    margin-top: -14px;
+  }
+
+  .tracking-step {
+    text-align: center;
+    position: relative;
+    width: 120px;
+  }
+
+  .tracking-icon {
+    width: 28px;
+    height: 28px;
+    background-color: #e9ecef;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 8px;
+    color: #6c757d;
+    position: relative;
+    z-index: 1;
+  }
+
+  .tracking-step.active .tracking-icon {
+    background-color: #198754;
+    color: white;
+  }
+
+  .tracking-label {
+    font-weight: 500;
+    margin-bottom: 4px;
+  }
+
+  .tracking-date {
+    font-size: 0.875rem;
+    color: #6c757d;
+  }
+
+  .detail-item {
+    padding: 0.5rem;
+    background-color: #f8f9fa;
+    border-radius: 0.5rem;
+  }
+
+  /* Responsive adjustments */
+  @media (max-width: 768px) {
+    .tracking-steps {
+      flex-direction: column;
+      align-items: flex-start;
+      margin-top: 0;
+      padding-left: 2rem;
+    }
+
+    .tracking-step {
+      width: 100%;
+      text-align: left;
+      margin-bottom: 1.5rem;
+      display: flex;
+      align-items: center;
+    }
+
+    .tracking-icon {
+      margin: 0 1rem 0 0;
+    }
+
+    .progress {
+      width: 2px;
+      height: 100%;
+      position: absolute;
+      left: 2rem;
+      transform: translateX(-50%);
+    }
+
+    .progress-bar {
+      width: 100% !important;
+      height: var(--progress-height) !important;
+    }
+  }
+</style>
+{% endblock %}

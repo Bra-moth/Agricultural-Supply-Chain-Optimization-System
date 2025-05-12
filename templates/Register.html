@@ -1,90 +1,251 @@
 {% extends "base.html" %}
-
-{% block title %}Register{% endblock %}
+{% block title %}Register - Agri-SCM{% endblock %}
 
 {% block content %}
-<div class="row justify-content-center">
-  <div class="col-md-6">
-    <div class="card">
-      <div class="card-header bg-success text-white">
-        <h3 class="mb-0">Register for Agri-SCM</h3>
-      </div>
-      <div class="card-body">
-        <form method="POST" action="{{ url_for('register') }}">
-          {{ form.hidden_tag() }}  <!-- CSRF Token - REQUIRED -->
-          
-          <div class="mb-3">
-            {{ form.username.label(class="form-label") }}
-            {{ form.username(class="form-control" + (" is-invalid" if form.username.errors else "")) }}
-            {% for error in form.username.errors %}
-            <div class="invalid-feedback">
-              {{ error }}
+<div class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-lg-8 col-md-10">
+      <div class="card shadow-lg">
+        <div class="card-header bg-success text-white py-3">
+          <div class="d-flex justify-content-between align-items-center">
+            <h3 class="mb-0"><i class="fas fa-user-plus me-2"></i>Create Your Account</h3>
+            <img src="{{ url_for('static', filename='images/agri-logo.png') }}" alt="Logo" height="40">
+          </div>
+        </div>
+        
+        <div class="card-body p-4">
+          <form method="POST" action="{{ url_for('register') }}" class="needs-validation" novalidate>
+            {{ form.hidden_tag() }}
+
+            <!-- Progress Indicator -->
+            <div class="mb-4">
+              <div class="progress" style="height: 8px;">
+                <div class="progress-bar bg-success" role="progressbar" style="width: 25%;" aria-valuenow="25" aria-valuemin="0" aria-valuemax="100"></div>
+              </div>
+              <small class="text-muted">Step 1 of 3: Basic Information</small>
             </div>
-            {% endfor %}
-          </div>
 
-          <div class="mb-3">
-            {{ form.email.label(class="form-label") }}
-            {{ form.email(class="form-control" + (" is-invalid" if form.email.errors else "")) }}
-            {% for error in form.email.errors %}
-            <div class="invalid-feedback">
-              {{ error }}
+            <div class="row g-3">
+              <!-- Username Field -->
+              <div class="col-md-6">
+                <div class="form-floating">
+                  <input type="text" class="form-control {{ 'is-invalid' if form.username.errors else '' }}" 
+                         id="username" name="username" placeholder="Username"
+                         value="{{ form.username.data if form.username.data else '' }}" required>
+                  <label for="username"><i class="fas fa-user me-2"></i>Username</label>
+                  {% for error in form.username.errors %}
+                  <div class="invalid-feedback">{{ error }}</div>
+                  {% endfor %}
+                </div>
+              </div>
+
+              <!-- Email Field -->
+              <div class="col-md-6">
+                <div class="form-floating">
+                  <input type="email" class="form-control {{ 'is-invalid' if form.email.errors else '' }}" 
+                         id="email" name="email" placeholder="Email"
+                         value="{{ form.email.data if form.email.data else '' }}" required>
+                  <label for="email"><i class="fas fa-envelope me-2"></i>Email</label>
+                  {% for error in form.email.errors %}
+                  <div class="invalid-feedback">{{ error }}</div>
+                  {% endfor %}
+                </div>
+              </div>
+
+              <!-- Password Fields -->
+              <div class="col-md-6">
+                <div class="form-floating position-relative">
+                  <input type="password" class="form-control {{ 'is-invalid' if form.password.errors else '' }}" 
+                         id="password" name="password" placeholder="Password" required>
+                  <label for="password"><i class="fas fa-lock me-2"></i>Password</label>
+                  <span class="position-absolute end-0 top-50 translate-middle-y me-3 toggle-password" 
+                        onclick="togglePassword('password')">
+                    <i class="fas fa-eye"></i>
+                  </span>
+                  {% for error in form.password.errors %}
+                  <div class="invalid-feedback">{{ error }}</div>
+                  {% endfor %}
+                </div>
+                <div class="password-strength mt-2">
+                  <div class="progress" style="height: 5px;">
+                    <div class="progress-bar bg-danger" id="password-strength-bar" style="width: 0%"></div>
+                  </div>
+                  <small class="text-muted" id="password-strength-text">Weak</small>
+                </div>
+              </div>
+
+              <div class="col-md-6">
+                <div class="form-floating position-relative">
+                  <input type="password" class="form-control {{ 'is-invalid' if form.confirm_password.errors else '' }}" 
+                         id="confirm_password" name="confirm_password" placeholder="Confirm Password" required>
+                  <label for="confirm_password"><i class="fas fa-lock me-2"></i>Confirm Password</label>
+                  <span class="position-absolute end-0 top-50 translate-middle-y me-3 toggle-password" 
+                        onclick="togglePassword('confirm_password')">
+                    <i class="fas fa-eye"></i>
+                  </span>
+                  {% for error in form.confirm_password.errors %}
+                  <div class="invalid-feedback">{{ error }}</div>
+                  {% endfor %}
+                </div>
+              </div>
+
+              <!-- Role Selection -->
+              <div class="col-md-6">
+                <div class="form-floating">
+                  <select class="form-select {{ 'is-invalid' if form.role.errors else '' }}" 
+                          id="role" name="role" required>
+                    <option value="">Select your role</option>
+                    <option value="farmer" {% if form.role.data == 'farmer' %}selected{% endif %}>Farmer</option>
+                    <option value="buyer" {% if form.role.data == 'buyer' %}selected{% endif %}>Buyer</option>
+                    <option value="logistics" {% if form.role.data == 'logistics' %}selected{% endif %}>Logistics Provider</option>
+                  </select>
+                  <label for="role"><i class="fas fa-user-tag me-2"></i>Account Type</label>
+                  {% for error in form.role.errors %}
+                  <div class="invalid-feedback">{{ error }}</div>
+                  {% endfor %}
+                </div>
+              </div>
+
+              <!-- Farm Size (Conditional) -->
+              <div class="col-md-6" id="farmSizeGroup" style="display: none;">
+                <div class="form-floating">
+                  <input type="text" class="form-control" id="farm_size" name="farm_size" 
+                         placeholder="Farm Size (acres)" value="{{ form.farm_size.data if form.farm_size.data else '' }}">
+                  <label for="farm_size"><i class="fas fa-tractor me-2"></i>Farm Size (acres)</label>
+                </div>
+              </div>
             </div>
-            {% endfor %}
-          </div>
 
-          <div class="mb-3">
-            {{ form.password.label(class="form-label") }}
-            {{ form.password(class="form-control" + (" is-invalid" if form.password.errors else "")) }}
-            {% for error in form.password.errors %}
-            <div class="invalid-feedback">
-              {{ error }}
+            <!-- Terms and Conditions -->
+            <div class="form-check mt-4">
+              <input class="form-check-input {{ 'is-invalid' if form.agree_terms.errors else '' }}" 
+                     type="checkbox" id="agree_terms" name="agree_terms" required>
+              <label class="form-check-label" for="agree_terms">
+                I agree to the <a href="#" data-bs-toggle="modal" data-bs-target="#termsModal">Terms and Conditions</a>
+              </label>
+              {% for error in form.agree_terms.errors %}
+              <div class="invalid-feedback">{{ error }}</div>
+              {% endfor %}
             </div>
-            {% endfor %}
-          </div>
 
-          <div class="mb-3">
-            {{ form.role.label(class="form-label") }}
-            {{ form.role(class="form-select") }}
-          </div>
-
-          <div class="mb-3" id="farmSizeGroup" style="display: none">
-            {{ form.farm_size.label(class="form-label") }}
-            {{ form.farm_size(class="form-control") }}
-          </div>
-
-          <div class="mb-3">
-            {{ form.location.label(class="form-label") }}
-            {{ form.location(class="form-control" + (" is-invalid" if form.location.errors else "")) }}
-            {% for error in form.location.errors %}
-            <div class="invalid-feedback">
-              {{ error }}
+            <!-- Submit Button -->
+            <div class="d-grid mt-4">
+              <button type="submit" class="btn btn-success btn-lg rounded-pill">
+                <i class="fas fa-user-plus me-2"></i>Create Account
+              </button>
             </div>
-            {% endfor %}
-          </div>
+          </form>
 
-          <button type="submit" class="btn btn-success w-100">Register</button>
-        </form>
-        <div class="mt-3 text-center">
-          Already have an account?
-          <a href="{{ url_for('login') }}">Login here</a>
+          <div class="text-center mt-4">
+            <p class="mb-0">Already have an account? 
+              <a href="{{ url_for('login') }}" class="fw-bold text-success">Sign In</a>
+            </p>
+          </div>
         </div>
       </div>
     </div>
   </div>
 </div>
 
+<!-- Terms Modal -->
+<div class="modal fade" id="termsModal" tabindex="-1" aria-labelledby="termsModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header bg-success text-white">
+        <h5 class="modal-title" id="termsModalLabel">Terms and Conditions</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <!-- Your terms and conditions content here -->
+        <p>This is where your terms and conditions would appear...</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-success" data-bs-dismiss="modal">I Understand</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- JavaScript Enhancements -->
 <script>
-  document.getElementById("role").addEventListener("change", function () {
-    const farmSizeGroup = document.getElementById("farmSizeGroup");
-    if (this.value === "farmer") {
-      farmSizeGroup.style.display = "block";
+  // Toggle password visibility
+  function togglePassword(fieldId) {
+    const field = document.getElementById(fieldId);
+    const icon = field.nextElementSibling.querySelector('i');
+    if (field.type === "password") {
+      field.type = "text";
+      icon.classList.replace('fa-eye', 'fa-eye-slash');
     } else {
-      farmSizeGroup.style.display = "none";
+      field.type = "password";
+      icon.classList.replace('fa-eye-slash', 'fa-eye');
+    }
+  }
+
+  // Show farm size field only for farmers
+  document.getElementById("role").addEventListener("change", function() {
+    const farmSizeGroup = document.getElementById("farmSizeGroup");
+    farmSizeGroup.style.display = this.value === "farmer" ? "block" : "none";
+    if (this.value === "farmer") {
+      document.getElementById("farm_size").required = true;
+    } else {
+      document.getElementById("farm_size").required = false;
     }
   });
-  
-  // Trigger change event on page load in case farmer is preselected
-  document.getElementById("role").dispatchEvent(new Event('change'));
+  document.getElementById("role").dispatchEvent(new Event("change"));
+
+  // Password strength indicator
+  document.getElementById("password").addEventListener("input", function() {
+    const strengthBar = document.getElementById("password-strength-bar");
+    const strengthText = document.getElementById("password-strength-text");
+    const strength = calculatePasswordStrength(this.value);
+    
+    strengthBar.style.width = strength.percentage + '%';
+    strengthBar.className = 'progress-bar ' + strength.class;
+    strengthText.textContent = strength.text;
+    strengthText.className = 'text-' + strength.class.replace('bg-', '');
+  });
+
+  function calculatePasswordStrength(password) {
+    let strength = 0;
+    if (password.length > 0) strength += 10;
+    if (password.length >= 8) strength += 30;
+    if (/[A-Z]/.test(password)) strength += 20;
+    if (/[0-9]/.test(password)) strength += 20;
+    if (/[^A-Za-z0-9]/.test(password)) strength += 20;
+    
+    strength = Math.min(strength, 100);
+    
+    if (strength < 40) return { percentage: strength, class: 'bg-danger', text: 'Weak' };
+    if (strength < 70) return { percentage: strength, class: 'bg-warning', text: 'Moderate' };
+    return { percentage: strength, class: 'bg-success', text: 'Strong' };
+  }
 </script>
+
+<style>
+  .toggle-password {
+    cursor: pointer;
+    color: #6c757d;
+    z-index: 10;
+  }
+  .toggle-password:hover {
+    color: #198754;
+  }
+  .form-floating label {
+    padding-left: 2.5rem;
+  }
+  .form-floating .fa {
+    position: absolute;
+    left: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #6c757d;
+  }
+  .card {
+    border-radius: 15px;
+    overflow: hidden;
+  }
+  .progress {
+    border-radius: 10px;
+  }
+</style>
 {% endblock %}

@@ -1,0 +1,277 @@
+{% extends "base.html" %} {% block title %}Order History - Agri-SCM{% endblock
+%} {% block content %}
+<div class="container py-4">
+  <div class="row mb-4">
+    <div class="col-12">
+      <h2 class="mb-0">Order History</h2>
+      <p class="text-muted">View and manage your orders</p>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col-12">
+      <div class="card">
+        <div
+          class="card-header d-flex justify-content-between align-items-center"
+        >
+          <div class="d-flex align-items-center">
+            <h5 class="mb-0 me-3">Orders</h5>
+            <div class="btn-group">
+              <button
+                class="btn btn-outline-secondary btn-sm active"
+                onclick="filterOrders('all')"
+              >
+                All
+              </button>
+              <button
+                class="btn btn-outline-secondary btn-sm"
+                onclick="filterOrders('pending')"
+              >
+                Pending
+              </button>
+              <button
+                class="btn btn-outline-secondary btn-sm"
+                onclick="filterOrders('processing')"
+              >
+                Processing
+              </button>
+              <button
+                class="btn btn-outline-secondary btn-sm"
+                onclick="filterOrders('completed')"
+              >
+                Completed
+              </button>
+              <button
+                class="btn btn-outline-secondary btn-sm"
+                onclick="filterOrders('cancelled')"
+              >
+                Cancelled
+              </button>
+            </div>
+          </div>
+          <div class="d-flex align-items-center">
+            <div class="input-group input-group-sm me-2" style="width: 200px">
+              <input
+                type="text"
+                class="form-control"
+                placeholder="Search orders..."
+                id="searchInput"
+                onkeyup="searchOrders()"
+              />
+              <button class="btn btn-outline-secondary" type="button">
+                <i class="bi bi-search"></i>
+              </button>
+            </div>
+            <div class="dropdown">
+              <button
+                class="btn btn-outline-secondary btn-sm dropdown-toggle"
+                type="button"
+                data-bs-toggle="dropdown"
+              >
+                <i class="bi bi-funnel"></i> Filter
+              </button>
+              <div class="dropdown-menu p-3" style="width: 300px">
+                <form id="filterForm">
+                  <div class="mb-3">
+                    <label class="form-label">Date Range</label>
+                    <div class="row g-2">
+                      <div class="col">
+                        <input
+                          type="date"
+                          class="form-control form-control-sm"
+                          name="start_date"
+                        />
+                      </div>
+                      <div class="col">
+                        <input
+                          type="date"
+                          class="form-control form-control-sm"
+                          name="end_date"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  <div class="mb-3">
+                    <label class="form-label">Price Range</label>
+                    <div class="row g-2">
+                      <div class="col">
+                        <input
+                          type="number"
+                          class="form-control form-control-sm"
+                          name="min_price"
+                          placeholder="Min"
+                        />
+                      </div>
+                      <div class="col">
+                        <input
+                          type="number"
+                          class="form-control form-control-sm"
+                          name="max_price"
+                          placeholder="Max"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    class="btn btn-primary btn-sm w-100"
+                    onclick="applyFilters()"
+                  >
+                    Apply Filters
+                  </button>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table table-hover">
+              <thead>
+                <tr>
+                  <th>Order ID</th>
+                  {% if user.role == 'retailer' %}
+                  <th>Distributor</th>
+                  {% elif user.role == 'distributor' %}
+                  <th>Retailer</th>
+                  {% endif %}
+                  <th>Items</th>
+                  <th>Total</th>
+                  <th>Date</th>
+                  <th>Status</th>
+                  <th>Delivery</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for order in orders %}
+                <tr class="order-row" data-status="{{ order.status }}">
+                  <td>#{{ order.id }}</td>
+                  {% if user.role == 'retailer' %}
+                  <td>{{ order.distributor.username }}</td>
+                  {% elif user.role == 'distributor' %}
+                  <td>{{ order.retailer.username }}</td>
+                  {% endif %}
+                  <td>{{ order.items|length }} items</td>
+                  <td>R{{ order.total_amount|round(2) }}</td>
+                  <td>{{ order.created_at.strftime('%Y-%m-%d') }}</td>
+                  <td>
+                    <span class="badge bg-{{ order.status_color }}">
+                      {{ order.status }}
+                    </span>
+                  </td>
+                  <td>
+                    {% if order.deliveries %} {% set delivery =
+                    order.deliveries[0] %}
+                    <span class="badge bg-{{ delivery.status_color }}">
+                      {{ delivery.status }}
+                    </span>
+                    {% else %}
+                    <span class="text-muted">-</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    <div class="btn-group btn-group-sm">
+                      <a
+                        href="{{ url_for('order_detail', order_id=order.id) }}"
+                        class="btn btn-outline-primary"
+                      >
+                        <i class="bi bi-eye"></i>
+                      </a>
+                      {% if user.role == 'retailer' and order.status ==
+                      'pending' %}
+                      <button
+                        class="btn btn-outline-danger"
+                        onclick="cancelOrder({{ order.id }})"
+                      >
+                        <i class="bi bi-x-circle"></i>
+                      </button>
+                      {% endif %}
+                    </div>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %} {% block scripts %}
+<script>
+  function filterOrders(status) {
+    const rows = document.querySelectorAll(".order-row");
+    rows.forEach((row) => {
+      if (status === "all" || row.dataset.status === status) {
+        row.style.display = "";
+      } else {
+        row.style.display = "none";
+      }
+    });
+
+    // Update active button
+    document.querySelectorAll(".btn-group .btn").forEach((btn) => {
+      btn.classList.remove("active");
+      if (btn.textContent.toLowerCase().includes(status)) {
+        btn.classList.add("active");
+      }
+    });
+  }
+
+  function searchOrders() {
+    const searchText = document
+      .getElementById("searchInput")
+      .value.toLowerCase();
+    const rows = document.querySelectorAll(".order-row");
+
+    rows.forEach((row) => {
+      const text = row.textContent.toLowerCase();
+      if (text.includes(searchText)) {
+        row.style.display = "";
+      } else {
+        row.style.display = "none";
+      }
+    });
+  }
+
+  function applyFilters() {
+    const formData = new FormData(document.getElementById("filterForm"));
+    const params = new URLSearchParams();
+
+    for (const [key, value] of formData.entries()) {
+      if (value) {
+        params.append(key, value);
+      }
+    }
+
+    window.location.href = `${window.location.pathname}?${params.toString()}`;
+  }
+
+  function cancelOrder(orderId) {
+    if (!confirm("Are you sure you want to cancel this order?")) {
+      return;
+    }
+
+    fetch(`/api/orders/${orderId}/cancel`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        if (data.success) {
+          location.reload();
+        } else {
+          alert(data.message || "Failed to cancel order");
+        }
+      })
+      .catch((error) => {
+        console.error("Error:", error);
+        alert("An error occurred while cancelling the order");
+      });
+  }
+</script>
+{% endblock %}

@@ -1,72 +1,211 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Add New Crop</title>
-    <!-- Bootstrap CSS (optional but recommended) -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-</head>
-<body>
-    <div class="container mt-5">
-        <h2 class="mb-4">Add New Crop</h2>
-        
-        <form method="POST" action="{{ url_for('add_crop') }}" enctype="multipart/form-data">
+{% extends "base.html" %} {% block title %}Add New Crop - Agri-SCM{% endblock %}
+{% block content %}
+<div class="container py-4">
+  <div class="row justify-content-center">
+    <div class="col-md-8">
+      <div class="card shadow">
+        <div class="card-header bg-success text-white">
+          <h3 class="mb-0">Add New Crop</h3>
+        </div>
+        <div class="card-body">
+          <form method="POST" enctype="multipart/form-data">
             {{ form.hidden_tag() }}
-            
-            <div class="mb-3">
-                {{ form.name.label(class="form-label") }}
-                {{ form.name(class="form-control") }}
-                {% if form.name.errors %}
-                    <div class="text-danger">
-                        {% for error in form.name.errors %}
-                            <small>{{ error }}</small><br>
-                        {% endfor %}
-                    </div>
-                {% endif %}
-            </div>
-            
-            <div class="mb-3">
-                {{ form.variety.label(class="form-label") }}
-                {{ form.variety(class="form-control") }}
-            </div>
-            
-            <div class="mb-3">
-                {{ form.planting_season.label(class="form-label") }}
-                {{ form.planting_season(class="form-control") }}
-            </div>
-            
-            <div class="mb-3">
-                {{ form.harvest_period.label(class="form-label") }}
-                {{ form.harvest_period(class="form-control") }}
-            </div>
-            
-            <div class="mb-3">
-                {{ form.yield_per_acre.label(class="form-label") }}
-                {{ form.yield_per_acre(class="form-control") }}
-            </div>
-            
-            <div class="mb-3">
-                {{ form.price_per_unit.label(class="form-label") }}
-                {{ form.price_per_unit(class="form-control") }}
-            </div>
-            
-            <div class="mb-3">
-                {{ form.description.label(class="form-label") }}
-                {{ form.description(class="form-control", rows=3) }}
-            </div>
-            
-            <div class="mb-3">
-                {{ form.image.label(class="form-label") }}
-                {{ form.image(class="form-control") }}
-            </div>
-            
-            <button type="submit" class="btn btn-primary">Add Crop</button>
-            <a href="{{ url_for('some_other_route') }}" class="btn btn-secondary">Cancel</a>
-        </form>
-    </div>
 
-    <!-- Bootstrap JS (optional) -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-</body>
-</html>
+            <div class="row g-3">
+              <!-- Crop Name -->
+              <div class="col-md-6">
+                <div class="form-group">
+                  {{ form.name.label(class="form-label") }} {{
+                  form.name(class="form-control" + (" is-invalid" if
+                  form.name.errors else "")) }} {% for error in form.name.errors
+                  %}
+                  <div class="invalid-feedback">{{ error }}</div>
+                  {% endfor %}
+                </div>
+              </div>
+
+              <!-- Variety -->
+              <div class="col-md-6">
+                <div class="form-group">
+                  {{ form.variety.label(class="form-label") }} {{
+                  form.variety(class="form-control" + (" is-invalid" if
+                  form.variety.errors else "")) }} {% for error in
+                  form.variety.errors %}
+                  <div class="invalid-feedback">{{ error }}</div>
+                  {% endfor %}
+                </div>
+              </div>
+
+              <!-- Planting Season -->
+              <div class="col-md-6">
+                <div class="form-group">
+                  {{ form.planting_season.label(class="form-label") }} {{
+                  form.planting_season(class="form-select" + (" is-invalid" if
+                  form.planting_season.errors else "")) }} {% for error in
+                  form.planting_season.errors %}
+                  <div class="invalid-feedback">{{ error }}</div>
+                  {% endfor %}
+                </div>
+              </div>
+
+              <!-- Harvest Period -->
+              <div class="col-md-6">
+                <div class="form-group">
+                  {{ form.harvest_period.label(class="form-label") }}
+                  <div class="input-group">
+                    {{ form.harvest_period(class="form-control" + (" is-invalid"
+                    if form.harvest_period.errors else "")) }}
+                    <span class="input-group-text">days</span>
+                  </div>
+                  {% for error in form.harvest_period.errors %}
+                  <div class="invalid-feedback">{{ error }}</div>
+                  {% endfor %}
+                </div>
+              </div>
+
+              <!-- Yield per Acre -->
+              <div class="col-md-6">
+                <div class="form-group">
+                  {{ form.yield_per_acre.label(class="form-label") }}
+                  <div class="input-group">
+                    {{ form.yield_per_acre(class="form-control" + (" is-invalid"
+                    if form.yield_per_acre.errors else "")) }}
+                    <span class="input-group-text">kg/acre</span>
+                  </div>
+                  {% for error in form.yield_per_acre.errors %}
+                  <div class="invalid-feedback">{{ error }}</div>
+                  {% endfor %}
+                </div>
+              </div>
+
+              <!-- Price per Unit -->
+              <div class="col-md-6">
+                <div class="form-group">
+                  {{ form.price_per_unit.label(class="form-label") }}
+                  <div class="input-group">
+                    <span class="input-group-text">R</span>
+                    {{ form.price_per_unit(class="form-control" + (" is-invalid"
+                    if form.price_per_unit.errors else "")) }}
+                    <span class="input-group-text">/kg</span>
+                  </div>
+                  {% for error in form.price_per_unit.errors %}
+                  <div class="invalid-feedback">{{ error }}</div>
+                  {% endfor %}
+                </div>
+              </div>
+
+              <!-- Description -->
+              <div class="col-12">
+                <div class="form-group">
+                  {{ form.description.label(class="form-label") }} {{
+                  form.description(class="form-control" + (" is-invalid" if
+                  form.description.errors else ""), rows="4") }} {% for error in
+                  form.description.errors %}
+                  <div class="invalid-feedback">{{ error }}</div>
+                  {% endfor %}
+                </div>
+              </div>
+
+              <!-- Image Upload -->
+              <div class="col-12">
+                <div class="form-group">
+                  {{ form.image.label(class="form-label") }} {{
+                  form.image(class="form-control" + (" is-invalid" if
+                  form.image.errors else "")) }}
+                  <div class="form-text">
+                    Upload an image of your crop (optional)
+                  </div>
+                  {% for error in form.image.errors %}
+                  <div class="invalid-feedback">{{ error }}</div>
+                  {% endfor %}
+                </div>
+              </div>
+            </div>
+
+            <div class="mt-4">
+              <button type="submit" class="btn btn-success">
+                <i class="bi bi-plus-circle me-2"></i>Add Crop
+              </button>
+              <a
+                href="{{ url_for('farmer_dashboard') }}"
+                class="btn btn-outline-secondary"
+              >
+                <i class="bi bi-x-circle me-2"></i>Cancel
+              </a>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %} {% block scripts %}
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    // Preview image before upload
+    const imageInput = document.querySelector('input[type="file"]');
+    imageInput.addEventListener("change", function () {
+      if (this.files && this.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function (e) {
+          const preview = document.createElement("img");
+          preview.src = e.target.result;
+          preview.className = "img-fluid mt-2 rounded";
+          preview.style.maxHeight = "200px";
+
+          const existingPreview =
+            imageInput.nextElementSibling.nextElementSibling;
+          if (existingPreview && existingPreview.tagName === "IMG") {
+            existingPreview.remove();
+          }
+
+          imageInput.parentNode.appendChild(preview);
+        };
+        reader.readAsDataURL(this.files[0]);
+      }
+    });
+
+    // Calculate expected harvest date based on planting season and harvest period
+    const plantingSeasonSelect = document.getElementById("planting_season");
+    const harvestPeriodInput = document.getElementById("harvest_period");
+
+    function updateExpectedHarvest() {
+      const season = plantingSeasonSelect.value;
+      const period = harvestPeriodInput.value;
+
+      if (season && period) {
+        const seasonStartDates = {
+          spring: "03-01",
+          summer: "06-01",
+          fall: "09-01",
+          winter: "12-01",
+        };
+
+        const startDate = new Date(
+          new Date().getFullYear() + "-" + seasonStartDates[season]
+        );
+        const harvestDate = new Date(
+          startDate.setDate(startDate.getDate() + parseInt(period))
+        );
+
+        // Update UI with expected harvest date
+        const harvestDateDisplay = document.getElementById(
+          "expected_harvest_date"
+        );
+        if (!harvestDateDisplay) {
+          const div = document.createElement("div");
+          div.className = "mt-3 text-muted";
+          div.id = "expected_harvest_date";
+          harvestPeriodInput.parentNode.parentNode.appendChild(div);
+        }
+        document.getElementById(
+          "expected_harvest_date"
+        ).textContent = `Expected harvest date: ${harvestDate.toLocaleDateString()}`;
+      }
+    }
+
+    plantingSeasonSelect.addEventListener("change", updateExpectedHarvest);
+    harvestPeriodInput.addEventListener("input", updateExpectedHarvest);
+  });
+</script>
+{% endblock %}

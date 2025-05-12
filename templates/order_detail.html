@@ -1,43 +1,89 @@
-{% comment %}  {% endcomment %}{% extends "base.html" %}
-{% block title %}Order #{{ order.id }} | Agri-SCM{% endblock %}
-
-{% block content %}
-<div class="container-fluid">
-  <div class="d-flex justify-content-between align-items-center mb-4">
-    <h2>
-      <i class="fas fa-receipt text-success me-2"></i>
-      Order #{{ order.id }}
-      <span class="badge bg-{{ 'success' if order.status == 'Delivered' else 'warning' }} ms-2">
-        {{ order.status }}
-      </span>
-    </h2>
-    <div>
-      {% if order.status != 'Delivered' %}
-      <button class="btn btn-outline-danger me-2">
-        <i class="fas fa-times me-2"></i>Cancel Order
-      </button>
-      {% endif %}
-      <button class="btn btn-outline-secondary">
-        <i class="fas fa-print me-2"></i>Print
-      </button>
+{% extends "base.html" %} {% block title %}Order #{{ order.id }} Details -
+Agri-SCM{% endblock %} {% block content %}
+<div class="container py-4">
+  <div class="row">
+    <div class="col-12">
+      <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+          <li class="breadcrumb-item">
+            <a href="{{ url_for(user.role + '_dashboard') }}">Dashboard</a>
+          </li>
+          <li class="breadcrumb-item active" aria-current="page">
+            Order #{{ order.id }}
+          </li>
+        </ol>
+      </nav>
     </div>
   </div>
 
-  <div class="row">
-    <div class="col-md-8 mb-4">
-      <div class="card shadow-sm">
-        <div class="card-header bg-light">
-          <h5 class="mb-0">Order Items</h5>
+  <div class="row g-4">
+    <!-- Order Summary -->
+    <div class="col-md-8">
+      <div class="card">
+        <div
+          class="card-header d-flex justify-content-between align-items-center"
+        >
+          <h5 class="mb-0">Order Summary</h5>
+          <span class="badge bg-{{ order.status_color }}"
+            >{{ order.status }}</span
+          >
         </div>
         <div class="card-body">
+          <div class="row mb-4">
+            <div class="col-md-6">
+              <h6 class="text-muted">Order Information</h6>
+              <p class="mb-1"><strong>Order ID:</strong> #{{ order.id }}</p>
+              <p class="mb-1">
+                <strong>Date:</strong> {{ order.created_at.strftime('%Y-%m-%d
+                %H:%M') }}
+              </p>
+              <p class="mb-1">
+                <strong>Status:</strong>
+                <span class="badge bg-{{ order.status_color }}"
+                  >{{ order.status }}</span
+                >
+              </p>
+              {% if order.completed_at %}
+              <p class="mb-1">
+                <strong>Completed:</strong> {{
+                order.completed_at.strftime('%Y-%m-%d %H:%M') }}
+              </p>
+              {% endif %}
+            </div>
+            <div class="col-md-6">
+              <h6 class="text-muted">Delivery Information</h6>
+              {% if order.deliveries %} {% set delivery = order.deliveries[0] %}
+              <p class="mb-1">
+                <strong>Status:</strong>
+                <span class="badge bg-{{ delivery.status_color }}"
+                  >{{ delivery.status }}</span
+                >
+              </p>
+              <p class="mb-1">
+                <strong>Scheduled:</strong> {{
+                delivery.scheduled_date.strftime('%Y-%m-%d %H:%M') }}
+              </p>
+              <p class="mb-1">
+                <strong>Tracking:</strong> {{ delivery.tracking_number }}
+              </p>
+              <p class="mb-1">
+                <strong>Address:</strong> {{ delivery.delivery_address }}
+              </p>
+              {% else %}
+              <p class="text-muted">No delivery information available</p>
+              {% endif %}
+            </div>
+          </div>
+
+          <h6 class="text-muted mb-3">Order Items</h6>
           <div class="table-responsive">
-            <table class="table">
+            <table class="table table-hover">
               <thead>
                 <tr>
                   <th>Product</th>
+                  <th>Unit Price</th>
                   <th>Quantity</th>
-                  <th>Price</th>
-                  <th>Total</th>
+                  <th class="text-end">Subtotal</th>
                 </tr>
               </thead>
               <tbody>
@@ -45,81 +91,221 @@
                 <tr>
                   <td>
                     <div class="d-flex align-items-center">
-                      <img src="{{ url_for('static', filename='images/produce/' + item.product.image) }}"z
-                           class="rounded me-3" 
-                           width="60" 
-                           height="60" 
-                           style="object-fit: cover;">
+                      {% if item.product.image %}
+                      <img
+                        src="{{ url_for('static', filename='uploads/' + item.product.image) }}"
+                        alt="{{ item.product.name }}"
+                        class="rounded me-2"
+                        style="width: 40px; height: 40px; object-fit: cover"
+                      />
+                      {% endif %}
                       <div>
                         <h6 class="mb-0">{{ item.product.name }}</h6>
-                        <small class="text-muted">{{ item.product.farmer.username }}</small>
+                        <small class="text-muted"
+                          >{{ item.product.variety }}</small
+                        >
                       </div>
                     </div>
                   </td>
-                  <td>{{ item.quantity }} kg</td>
-                  <td>R{{ item.price }}/kg</td>
-                  <td>R{{ item.quantity * item.price }}</td>
+                  <td>R{{ item.price_per_unit|round(2) }}</td>
+                  <td>{{ item.quantity }}</td>
+                  <td class="text-end">R{{ item.subtotal|round(2) }}</td>
                 </tr>
                 {% endfor %}
               </tbody>
+              <tfoot>
+                <tr>
+                  <td colspan="3" class="text-end"><strong>Total:</strong></td>
+                  <td class="text-end">
+                    <strong>R{{ order.total_amount|round(2) }}</strong>
+                  </td>
+                </tr>
+              </tfoot>
             </table>
           </div>
         </div>
       </div>
     </div>
 
-    <div class="col-md-4 mb-4">
-      <div class="card shadow-sm">
-        <div class="card-header bg-light">
-          <h5 class="mb-0">Order Summary</h5>
+    <!-- Order Actions -->
+    <div class="col-md-4">
+      <div class="card mb-4">
+        <div class="card-header">
+          <h5 class="mb-0">Order Actions</h5>
         </div>
         <div class="card-body">
-          <div class="d-flex justify-content-between mb-2">
-            <span>Subtotal:</span>
-            <span>R{{ order.subtotal }}</span>
-          </div>
-          <div class="d-flex justify-content-between mb-2">
-            <span>Shipping:</span>
-            <span>R{{ order.shipping }}</span>
-          </div>
-          <div class="d-flex justify-content-between mb-3">
-            <span>Tax:</span>
-            <span>R{{ order.tax }}</span>
-          </div>
-          <hr>
-          <div class="d-flex justify-content-between fw-bold">
-            <span>Total:</span>
-            <span>R{{ order.total }}</span>
-          </div>
+          {% if user.role == 'distributor' %} {% if order.status == 'pending' %}
+          <button
+            class="btn btn-success w-100 mb-2"
+            onclick="updateOrderStatus('processing')"
+          >
+            <i class="bi bi-check-circle"></i> Accept Order
+          </button>
+          <button
+            class="btn btn-danger w-100"
+            onclick="updateOrderStatus('cancelled')"
+          >
+            <i class="bi bi-x-circle"></i> Reject Order
+          </button>
+          {% elif order.status == 'processing' %}
+          <button
+            class="btn btn-success w-100"
+            onclick="updateOrderStatus('completed')"
+          >
+            <i class="bi bi-check2-all"></i> Mark as Completed
+          </button>
+          {% endif %} {% elif user.role == 'retailer' %} {% if order.status ==
+          'pending' %}
+          <button class="btn btn-danger w-100" onclick="cancelOrder()">
+            <i class="bi bi-x-circle"></i> Cancel Order
+          </button>
+          {% endif %} {% endif %}
         </div>
       </div>
 
-      <div class="card shadow-sm mt-4">
-        <div class="card-header bg-light">
-          <h5 class="mb-0">Shipping Information</h5>
+      {% if order.deliveries %} {% set delivery = order.deliveries[0] %}
+      <div class="card">
+        <div class="card-header">
+          <h5 class="mb-0">Delivery Timeline</h5>
         </div>
         <div class="card-body">
-          <h6>{{ order.shipping_address.name }}</h6>
-          <p class="mb-1">{{ order.shipping_address.street }}</p>
-          <p class="mb-1">{{ order.shipping_address.city }}, {{ order.shipping_address.province }}</p>
-          <p class="mb-0">{{ order.shipping_address.postal_code }}</p>
-          <hr>
-          <h6>Delivery Status</h6>
-          <div class="progress mt-3">
-            <div class="progress-bar bg-success" 
-                 role="progressbar" 
-                 style="width: {{ order.status_percentage }}%"
-                 aria-valuenow="{{ order.status_percentage }}" 
-                 aria-valuemin="0" 
-                 aria-valuemax="100">
+          <div class="timeline">
+            <div class="timeline-item">
+              <div class="timeline-marker bg-success"></div>
+              <div class="timeline-content">
+                <h6 class="mb-0">Order Placed</h6>
+                <small class="text-muted"
+                  >{{ order.created_at.strftime('%Y-%m-%d %H:%M') }}</small
+                >
+              </div>
             </div>
-          </div>
-          <div class="mt-2 text-muted small">
-            {{ order.status_details }}
+            {% if order.status != 'pending' %}
+            <div class="timeline-item">
+              <div
+                class="timeline-marker {{ 'bg-success' if order.status in ['processing', 'completed'] else 'bg-secondary' }}"
+              ></div>
+              <div class="timeline-content">
+                <h6 class="mb-0">Order Processing</h6>
+                <small class="text-muted">Order accepted by distributor</small>
+              </div>
+            </div>
+            {% endif %} {% if delivery.status in ['in_transit', 'completed'] %}
+            <div class="timeline-item">
+              <div
+                class="timeline-marker {{ 'bg-success' if delivery.status == 'completed' else 'bg-secondary' }}"
+              ></div>
+              <div class="timeline-content">
+                <h6 class="mb-0">Out for Delivery</h6>
+                <small class="text-muted"
+                  >{{ delivery.scheduled_date.strftime('%Y-%m-%d %H:%M')
+                  }}</small
+                >
+              </div>
+            </div>
+            {% endif %} {% if delivery.status == 'completed' %}
+            <div class="timeline-item">
+              <div class="timeline-marker bg-success"></div>
+              <div class="timeline-content">
+                <h6 class="mb-0">Delivered</h6>
+                <small class="text-muted"
+                  >{{ delivery.completed_at.strftime('%Y-%m-%d %H:%M') }}</small
+                >
+              </div>
+            </div>
+            {% endif %}
           </div>
         </div>
       </div>
+      {% endif %}
     </div>
   </div>
 </div>
+{% endblock %} {% block styles %}
+<style>
+  .timeline {
+    position: relative;
+    padding-left: 30px;
+  }
+
+  .timeline-item {
+    position: relative;
+    padding-bottom: 1.5rem;
+  }
+
+  .timeline-item:last-child {
+    padding-bottom: 0;
+  }
+
+  .timeline-marker {
+    position: absolute;
+    left: -30px;
+    width: 15px;
+    height: 15px;
+    border-radius: 50%;
+  }
+
+  .timeline-item:not(:last-child) .timeline-marker::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 15px;
+    bottom: -30px;
+    width: 2px;
+    margin-left: -1px;
+    background-color: #e9ecef;
+  }
+</style>
+{% endblock %} {% block scripts %}
+<script>
+  function updateOrderStatus(status) {
+    if (!confirm(`Are you sure you want to ${status} this order?`)) {
+      return;
+    }
+
+    fetch(`/api/orders/{{ order.id }}/status`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ status: status }),
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        if (data.success) {
+          location.reload();
+        } else {
+          alert(data.message || "Failed to update order status");
+        }
+      })
+      .catch((error) => {
+        console.error("Error:", error);
+        alert("An error occurred while updating the order status");
+      });
+  }
+
+  function cancelOrder() {
+    if (!confirm("Are you sure you want to cancel this order?")) {
+      return;
+    }
+
+    fetch(`/api/orders/{{ order.id }}/cancel`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        if (data.success) {
+          location.reload();
+        } else {
+          alert(data.message || "Failed to cancel order");
+        }
+      })
+      .catch((error) => {
+        console.error("Error:", error);
+        alert("An error occurred while cancelling the order");
+      });
+  }
+</script>
 {% endblock %}

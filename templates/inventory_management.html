@@ -1,0 +1,459 @@
+{% extends "base.html" %} {% block title %}Inventory Management - Agri-SCM{%
+endblock %} {% block content %}
+<div class="container py-4">
+  <div class="row mb-4">
+    <div class="col-12">
+      <h2 class="mb-0">Inventory Management</h2>
+      <p class="text-muted">Manage your product inventory</p>
+    </div>
+  </div>
+
+  <div class="row g-4">
+    <!-- Inventory Overview -->
+    <div class="col-md-12">
+      <div class="card">
+        <div
+          class="card-header d-flex justify-content-between align-items-center"
+        >
+          <div class="d-flex align-items-center">
+            <h5 class="mb-0 me-3">Products</h5>
+            <div class="btn-group">
+              <button
+                class="btn btn-outline-secondary btn-sm active"
+                onclick="filterInventory('all')"
+              >
+                All
+              </button>
+              <button
+                class="btn btn-outline-secondary btn-sm"
+                onclick="filterInventory('in_stock')"
+              >
+                In Stock
+              </button>
+              <button
+                class="btn btn-outline-secondary btn-sm"
+                onclick="filterInventory('low_stock')"
+              >
+                Low Stock
+              </button>
+              <button
+                class="btn btn-outline-secondary btn-sm"
+                onclick="filterInventory('out_of_stock')"
+              >
+                Out of Stock
+              </button>
+            </div>
+          </div>
+          <div class="d-flex align-items-center">
+            <div class="input-group input-group-sm me-2" style="width: 200px">
+              <input
+                type="text"
+                class="form-control"
+                placeholder="Search products..."
+                id="searchInput"
+                onkeyup="searchInventory()"
+              />
+              <button class="btn btn-outline-secondary" type="button">
+                <i class="bi bi-search"></i>
+              </button>
+            </div>
+            <button
+              class="btn btn-primary btn-sm"
+              data-bs-toggle="modal"
+              data-bs-target="#addProductModal"
+            >
+              <i class="bi bi-plus-circle"></i> Add Product
+            </button>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table table-hover">
+              <thead>
+                <tr>
+                  <th>Product</th>
+                  <th>Category</th>
+                  <th>Quantity</th>
+                  <th>Min. Quantity</th>
+                  <th>Price/Unit</th>
+                  <th>Status</th>
+                  <th>Last Updated</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for item in inventory_items %}
+                <tr class="inventory-row" data-status="{{ item.status }}">
+                  <td>
+                    <div class="d-flex align-items-center">
+                      {% if item.image %}
+                      <img
+                        src="{{ url_for('static', filename='uploads/' + item.image) }}"
+                        alt="{{ item.name }}"
+                        class="rounded me-2"
+                        style="width: 40px; height: 40px; object-fit: cover"
+                      />
+                      {% endif %}
+                      <div>
+                        <h6 class="mb-0">{{ item.name }}</h6>
+                        <small class="text-muted"
+                          >{{ item.description[:50] }}...</small
+                        >
+                      </div>
+                    </div>
+                  </td>
+                  <td>{{ item.category }}</td>
+                  <td>{{ item.quantity }} {{ item.unit }}</td>
+                  <td>{{ item.min_quantity }} {{ item.unit }}</td>
+                  <td>R{{ item.price_per_unit|round(2) }}</td>
+                  <td>
+                    <span class="badge bg-{{ item.status_color }}">
+                      {{ item.status|replace('_', ' ')|title }}
+                    </span>
+                  </td>
+                  <td>{{ item.updated_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                  <td>
+                    <div class="btn-group btn-group-sm">
+                      <button
+                        class="btn btn-outline-primary"
+                        onclick="editProduct({{ item.id }})"
+                      >
+                        <i class="bi bi-pencil"></i>
+                      </button>
+                      <button
+                        class="btn btn-outline-success"
+                        onclick="updateStock({{ item.id }})"
+                      >
+                        <i class="bi bi-plus-slash-minus"></i>
+                      </button>
+                      <button
+                        class="btn btn-outline-danger"
+                        onclick="deleteProduct({{ item.id }})"
+                      >
+                        <i class="bi bi-trash"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Add Product Modal -->
+<div class="modal fade" id="addProductModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Add New Product</h5>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+        ></button>
+      </div>
+      <div class="modal-body">
+        <form id="addProductForm" enctype="multipart/form-data">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">Product Name</label>
+              <input type="text" class="form-control" name="name" required />
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Category</label>
+              <select class="form-select" name="category" required>
+                <option value="">Select Category</option>
+                <option value="Grains">Grains</option>
+                <option value="Vegetables">Vegetables</option>
+                <option value="Fruits">Fruits</option>
+                <option value="Dairy">Dairy</option>
+                <option value="Meat">Meat</option>
+              </select>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Quantity</label>
+              <input
+                type="number"
+                class="form-control"
+                name="quantity"
+                required
+                min="0"
+                step="0.01"
+              />
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Unit</label>
+              <select class="form-select" name="unit" required>
+                <option value="kg">Kilogram (kg)</option>
+                <option value="g">Gram (g)</option>
+                <option value="l">Liter (l)</option>
+                <option value="ml">Milliliter (ml)</option>
+                <option value="pcs">Pieces (pcs)</option>
+              </select>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Minimum Quantity</label>
+              <input
+                type="number"
+                class="form-control"
+                name="min_quantity"
+                required
+                min="0"
+                step="0.01"
+              />
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Price per Unit</label>
+              <div class="input-group">
+                <span class="input-group-text">R</span>
+                <input
+                  type="number"
+                  class="form-control"
+                  name="price_per_unit"
+                  required
+                  min="0"
+                  step="0.01"
+                />
+              </div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Product Image</label>
+              <input
+                type="file"
+                class="form-control"
+                name="image"
+                accept="image/*"
+              />
+            </div>
+            <div class="col-12">
+              <label class="form-label">Description</label>
+              <textarea
+                class="form-control"
+                name="description"
+                rows="3"
+              ></textarea>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          Cancel
+        </button>
+        <button type="button" class="btn btn-primary" onclick="submitProduct()">
+          Add Product
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Update Stock Modal -->
+<div class="modal fade" id="updateStockModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Update Stock</h5>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+        ></button>
+      </div>
+      <div class="modal-body">
+        <form id="updateStockForm">
+          <input type="hidden" name="product_id" />
+          <div class="mb-3">
+            <label class="form-label">Current Stock</label>
+            <input
+              type="number"
+              class="form-control"
+              id="currentStock"
+              readonly
+            />
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Adjustment Type</label>
+            <select class="form-select" name="adjustment_type" required>
+              <option value="add">Add Stock</option>
+              <option value="remove">Remove Stock</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Quantity</label>
+            <input
+              type="number"
+              class="form-control"
+              name="quantity"
+              required
+              min="0"
+              step="0.01"
+            />
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Reason</label>
+            <textarea class="form-control" name="reason" rows="2"></textarea>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          Cancel
+        </button>
+        <button
+          type="button"
+          class="btn btn-primary"
+          onclick="submitStockUpdate()"
+        >
+          Update Stock
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %} {% block scripts %}
+<script>
+  function filterInventory(status) {
+    const rows = document.querySelectorAll(".inventory-row");
+    rows.forEach((row) => {
+      if (status === "all" || row.dataset.status === status) {
+        row.style.display = "";
+      } else {
+        row.style.display = "none";
+      }
+    });
+
+    // Update active button
+    document.querySelectorAll(".btn-group .btn").forEach((btn) => {
+      btn.classList.remove("active");
+      if (btn.textContent.toLowerCase().includes(status)) {
+        btn.classList.add("active");
+      }
+    });
+  }
+
+  function searchInventory() {
+    const searchText = document
+      .getElementById("searchInput")
+      .value.toLowerCase();
+    const rows = document.querySelectorAll(".inventory-row");
+
+    rows.forEach((row) => {
+      const text = row.textContent.toLowerCase();
+      if (text.includes(searchText)) {
+        row.style.display = "";
+      } else {
+        row.style.display = "none";
+      }
+    });
+  }
+
+  function submitProduct() {
+    const form = document.getElementById("addProductForm");
+    const formData = new FormData(form);
+
+    fetch("/api/inventory/add", {
+      method: "POST",
+      body: formData,
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        if (data.success) {
+          location.reload();
+        } else {
+          alert(data.message || "Failed to add product");
+        }
+      })
+      .catch((error) => {
+        console.error("Error:", error);
+        alert("An error occurred while adding the product");
+      });
+  }
+
+  function updateStock(productId) {
+    // Get product details
+    fetch(`/api/inventory/${productId}`)
+      .then((response) => response.json())
+      .then((data) => {
+        if (data.success) {
+          document.querySelector(
+            '#updateStockForm input[name="product_id"]'
+          ).value = productId;
+          document.getElementById("currentStock").value = data.product.quantity;
+          const modal = new bootstrap.Modal(
+            document.getElementById("updateStockModal")
+          );
+          modal.show();
+        } else {
+          alert(data.message || "Failed to get product details");
+        }
+      })
+      .catch((error) => {
+        console.error("Error:", error);
+        alert("An error occurred while getting product details");
+      });
+  }
+
+  function submitStockUpdate() {
+    const form = document.getElementById("updateStockForm");
+    const formData = new FormData(form);
+    const productId = formData.get("product_id");
+
+    fetch(`/api/inventory/${productId}/stock`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        adjustment_type: formData.get("adjustment_type"),
+        quantity: parseFloat(formData.get("quantity")),
+        reason: formData.get("reason"),
+      }),
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        if (data.success) {
+          location.reload();
+        } else {
+          alert(data.message || "Failed to update stock");
+        }
+      })
+      .catch((error) => {
+        console.error("Error:", error);
+        alert("An error occurred while updating stock");
+      });
+  }
+
+  function deleteProduct(productId) {
+    if (!confirm("Are you sure you want to delete this product?")) {
+      return;
+    }
+
+    fetch(`/api/inventory/${productId}`, {
+      method: "DELETE",
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        if (data.success) {
+          location.reload();
+        } else {
+          alert(data.message || "Failed to delete product");
+        }
+      })
+      .catch((error) => {
+        console.error("Error:", error);
+        alert("An error occurred while deleting the product");
+      });
+  }
+
+  function editProduct(productId) {
+    // Redirect to edit page
+    window.location.href = `/inventory/edit/${productId}`;
+  }
+</script>
+{% endblock %}

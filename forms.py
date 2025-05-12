@@ -65,3 +65,10 @@ class CreateOrderForm(FlaskForm):
     product_id = SelectField('Product', coerce=int, validators=[DataRequired()])
     quantity = IntegerField('Quantity', validators=[DataRequired(), NumberRange(min=1)])
     submit = SubmitField('Create Order')
+
+    def __init__(self, *args, **kwargs):
+        super(CreateOrderForm, self).__init__(*args, **kwargs)
+        # Dynamically populate the 'farmer_id' field with farmers from the database
+        self.farmer_id.choices = [(farmer.id, farmer.username) for farmer in User.query.filter_by(role='farmer').all()]
+        # Dynamically populate the 'product_id' field with products from the database
+        self.product_id.choices = [(product.id, product.name) for product in Product.query.all()]

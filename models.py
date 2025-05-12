@@ -2,6 +2,9 @@ from flask_login import UserMixin
 from extensions import db
 from datetime import datetime
 from werkzeug.security import generate_password_hash, check_password_hash
+from wtforms import StringField, SelectField, FloatField, TextAreaField, FileField
+from wtforms.validators import DataRequired, Optional
+from flask_wtf import FlaskForm
 
 class User(db.Model, UserMixin):
     __tablename__ = 'users'
@@ -9,7 +12,7 @@ class User(db.Model, UserMixin):
     username = db.Column(db.String(80), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(128))
-    role = db.Column(db.String(20), nullable=False)
+    role = db.Column(db.String(20), nullable=False, default='farmer')
     location = db.Column(db.String(100))
     farm_size = db.Column(db.String(50))
     
@@ -41,6 +44,24 @@ class Crop(db.Model):
     quantity = db.Column(db.Float, nullable=False)
     planting_date = db.Column(db.Date, nullable=False)
     crop_farmer_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+
+
+
+class CropForm(FlaskForm):
+    name = StringField('Crop Name', validators=[DataRequired()])
+    variety = StringField('Variety', validators=[Optional()])
+    planting_season = SelectField('Planting Season', choices=[
+        ('spring', 'Spring'),
+        ('summer', 'Summer'),
+        ('fall', 'Fall'), 
+        ('winter', 'Winter')
+    ], validators=[DataRequired()])
+    harvest_period = StringField('Harvest Period (days)', validators=[Optional()])
+    yield_per_acre = FloatField('Yield per Acre', validators=[Optional()])
+    price_per_unit = FloatField('Price per Unit', validators=[Optional()])
+    description = TextAreaField('Description', validators=[Optional()])
+    image = FileField('Crop Image', validators=[Optional()])
+
 class Product(db.Model):
     __tablename__ = 'products'
     id = db.Column(db.Integer, primary_key=True)
@@ -59,25 +80,35 @@ class Product(db.Model):
 class Order(db.Model):
     __tablename__ = 'orders'
     id = db.Column(db.Integer, primary_key=True)
-    farmer_id = db.Column(db.Integer, db.ForeignKey('user.id'))
-    distributor_id = db.Column(db.Integer, db.ForeignKey('user.id'))
-    product_id = db.Column(db.Integer, db.ForeignKey('product.id'))
+    farmer_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    distributor_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    product_id = db.Column(db.Integer, db.ForeignKey('products.id'))
     quantity = db.Column(db.Float)
-    status = db.Column(db.String(20), default='pending')  # pending, processing, shipped, delivered
+    status = db.Column(db.String(20), default='pending')
     order_date = db.Column(db.DateTime, default=datetime.utcnow)
     delivery_date = db.Column(db.DateTime)
+
     farmer = db.relationship('User', foreign_keys=[farmer_id], backref='orders_as_farmer')
     distributor = db.relationship('User', foreign_keys=[distributor_id], backref='orders_as_distributor')
     product = db.relationship('Product', backref='orders')
 
 
 class RestockOrder(db.Model):
+    __tablename__ = 'restock_orders'
     id = db.Column(db.Integer, primary_key=True)
-    product_id = db.Column(db.Integer, db.ForeignKey('product.id'))
+    product_id = db.Column(db.Integer, db.ForeignKey('products.id'))
     quantity = db.Column(db.Float)
-    distributor_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    distributor_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     status = db.Column(db.String(20), default='requested')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     product = db.relationship('Product', backref='restock_orders')
     distributor = db.relationship('User')
+
+
+class Supplier(db.Model):
+    __tablename__ = 'supplier'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    address = db.Column(db.String(200), nullable=False)
+    

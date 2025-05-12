@@ -1,9 +1,11 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, session, abort, Response
-from flask_login import LoginManager, UserMixin, login_user, logout_user, current_user, login_required
+from flask import Flask, render_template, redirect, url_for, flash, session, abort, Response
+from flask_login import LoginManager, login_user, logout_user, current_user, login_required
 from flask_wtf import CSRFProtect
-from werkzeug.security import generate_password_hash, check_password_hash
+# Removed unused imports from werkzeug.security
+from werkzeug.utils import secure_filename
 from datetime import datetime
 from functools import wraps
+import os
 import json
 import time
 from extensions import db, login_manager
@@ -14,21 +16,57 @@ app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///agricultural_scm.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SECRET_KEY'] = 'your-secret-key-here'
+app.config['WTF_CSRF_ENABLED'] = True
+
+csrf = CSRFProtect(app)
 
 # Initialize extensions
 db.init_app(app)
+login_manager = LoginManager()
+login_manager.login_view = 'login'  # this should be after the `login_manager` is instantiated
 login_manager.init_app(app)
-login_manager.login_view = 'login'
 
+# Define the user_loader function
 @login_manager.user_loader
 def load_user(user_id):
-    return User.query.get(int(user_id))
+    return User.query.get(int(user_id))  # Assuming User has an 'id' field
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    form = LoginForm()
+    
+    if form.validate_on_submit():
+        user = User.query.filter_by(username=form.username.data).first()
+        if user and user.check_password(form.password.data):
+            # Use Flask-Login's login_user function
+            login_user(user)  # This will manage the session automatically
+
+            flash('Login successful!', 'success')
+            return redirect(url_for('dashboard'))  # Redirect to the dashboard page
+        flash('Invalid username or password', 'danger')
+
+    return render_template('login.html', form=form)
+
+# Define a default route
+@app.route('/')
+def home():
+    return render_template('home.html')
+
+if __name__ == '__main__':
+    app.run(debug=True)
+
+# Only run this once to create the database
+if __name__ == '__main__':
+    with app.app_context():
+        db.create_all()
+    app.run(debug=True)
 
 
-
+# Define the user_loader function
 @login_manager.user_loader
 def load_user(user_id):
-    return User.query.get(int(user_id))
+    return User.query.get(int(user_id))  # Assuming User has an 'id' field
+
 
 # Context processors
 @app.context_processor
@@ -40,7 +78,7 @@ def inject_user():
 
 @app.context_processor
 def inject_now():
-    return {'now': datetime.utcnow()}
+    return {'now': datetime.now(datetime.timezone.utc)}
 
 # Decorators
 def login_required(f):
@@ -104,27 +142,14 @@ def register():
 
     return render_template('Register.html', form=form)
 
-@app.route('/login', methods=['GET', 'POST'])
-def login():
-    form = LoginForm()
-    
-    if form.validate_on_submit():
-        user = User.query.filter_by(username=form.username.data).first()
-        if user and user.check_password(form.password.data):
-            session['user_id'] = user.id
-            session['username'] = user.username
-            session['role'] = user.role
-            flash('Login successful!', 'success')
-            return redirect(url_for('dashboard'))
-        flash('Invalid username or password', 'danger')
 
-    return render_template('login.html', form=form)
+
 
 @app.route('/dashboard')
 @login_required
 def dashboard():
-    user = User.query.get(session['user_id'])
-    
+    user = current_user  # Use Flask-Login's current_user to get the logged-in user
+
     if user.role == 'farmer':
         crops = Crop.query.filter_by(crop_farmer_id=user.id).all()  # Updated to crop_farmer_id
         orders = Order.query.filter_by(order_farmer_id=user.id).all()  # Updated to order_farmer_id
@@ -139,6 +164,7 @@ def dashboard():
     
     return render_template('dashboard.html', user=user)
 
+
 @app.route('/crop-inventory')
 @login_required
 @role_required('farmer')
@@ -147,30 +173,43 @@ def crop_inventory():
     crops = Crop.query.filter_by(crop_farmer_id=user.id).all()  # Updated to crop_farmer_id
     return render_template('crop_inventory.html', crops=crops)
 
+
+
 @app.route('/add-crop', methods=['GET', 'POST'])
 @login_required
-@role_required('farmer')
 def add_crop():
     form = CropForm()
     if form.validate_on_submit():
-        new_crop = Crop(
-            crop_type=form.crop_type.data,
-            quantity=form.quantity.data,
-            planting_date=form.planting_date.data,
-            crop_farmer_id=session['user_id']  # Updated to crop_farmer_id
-        )
-        db.session.add(new_crop)
-        try:
-            db.session.commit()
-            flash('Crop added successfully!', 'success')
-            return redirect(url_for('crop_inventory'))
-        except Exception as e:
-            db.session.rollback()
-            flash('Failed to add crop. Please try again.', 'danger')
-            app.logger.error(f'Add crop error: {str(e)}')
-    
-    return render_template('add_crop.html', form=form)
+        # Process the file upload
+        if form.image.data:
+            # Secure the filename and save the file
+            filename = secure_filename(form.image.data.filename)
+            filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            form.image.data.save(filepath)
 
+            # Create a new Crop instance with the uploaded image's path
+            new_crop = Crop(
+                name=form.name.data,
+                variety=form.variety.data,
+                planting_season=form.planting_season.data,
+                harvest_period=form.harvest_period.data,
+                yield_per_acre=form.yield_per_acre.data,
+                price_per_unit=form.price_per_unit.data,
+                description=form.description.data,
+                image_path=filepath  # Save the path to the database
+            )
+
+            db.session.add(new_crop)
+            try:
+                db.session.commit()
+                flash('Crop added successfully!', 'success')
+                return redirect(url_for('crop_inventory'))
+            except Exception as e:
+                db.session.rollback()
+                flash('Failed to add crop. Please try again.', 'danger')
+                app.logger.error(f'Error: {str(e)}')
+
+    return render_template('add_crop.html', form=form)
 
 @app.route('/orders')
 @login_required
@@ -267,8 +306,9 @@ def order_updates():
     return Response(event_stream(), mimetype="text/event-stream")
 
 @app.route('/logout')
+@login_required
 def logout():
-    session.clear()
+    logout_user()  # Using Flask-Login's logout_user() function
     flash('You have been logged out', 'info')
     return redirect(url_for('index'))
 

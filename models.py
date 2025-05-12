@@ -2,8 +2,8 @@ from flask_login import UserMixin
 from extensions import db
 from datetime import datetime
 from werkzeug.security import generate_password_hash, check_password_hash
-from wtforms import StringField, SelectField, FloatField, TextAreaField, FileField
-from wtforms.validators import DataRequired, Optional
+from wtforms import StringField, SelectField, FloatField, TextAreaField, FileField, PasswordField, BooleanField, SubmitField
+from wtforms.validators import DataRequired, Optional, Length, Email, ValidationError, EqualTo
 from flask_wtf import FlaskForm
 
 class User(db.Model, UserMixin):
@@ -16,36 +16,47 @@ class User(db.Model, UserMixin):
     location = db.Column(db.String(100))
     farm_size = db.Column(db.String(50))
     
-    # Updated relationships with explicit foreign_keys
-    crops = db.relationship('Crop', backref='crop_farmer', lazy=True, 
-                          foreign_keys='Crop.crop_farmer_id')
-    
-    # Split orders into two separate relationships
-    farmer_orders = db.relationship('Order', 
-                                  backref='selling_farmer', 
-                                  lazy=True,
-                                  foreign_keys='Order.order_farmer_id')
-    
-    buyer_orders = db.relationship('Order',
-                                 backref='purchasing_buyer',
-                                 lazy=True,
-                                 foreign_keys='Order.buyer_id')
+    # Relationships
+    crops = db.relationship('Crop', backref='farmer', lazy=True)
+    restock_orders = db.relationship('RestockOrder', backref='distributor', lazy=True)
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
 
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
+    
 
 class Crop(db.Model):
     __tablename__ = 'crops'
     id = db.Column(db.Integer, primary_key=True)
-    crop_type = db.Column(db.String(100), nullable=False)
+    farmer_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    name = db.Column(db.String(100), nullable=False)
+    variety = db.Column(db.String(100))
     quantity = db.Column(db.Float, nullable=False)
-    planting_date = db.Column(db.Date, nullable=False)
-    crop_farmer_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    unit = db.Column(db.String(20), nullable=False)
+    planting_date = db.Column(db.DateTime, nullable=False)
+    expected_harvest_date = db.Column(db.DateTime, nullable=False)
+    harvest_date = db.Column(db.DateTime)
+    status = db.Column(db.String(50), default='growing')  # growing, ready_for_harvest, harvested
+    image_path = db.Column(db.String(255))
+    notes = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
+class Inventory(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    farmer_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    crop_id = db.Column(db.Integer, db.ForeignKey('crops.id'), nullable=False)
+    quantity = db.Column(db.Float, nullable=False)
+    unit = db.Column(db.String(20), nullable=False)
+    status = db.Column(db.String(50), default='available')  # available, reserved, sold
+    price_per_unit = db.Column(db.Float)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
+    # Relationships
+    farmer = db.relationship('User', backref=db.backref('inventory_items', lazy=True))
 
 class CropForm(FlaskForm):
     name = StringField('Crop Name', validators=[DataRequired()])
@@ -72,43 +83,169 @@ class Product(db.Model):
     current_stock = db.Column(db.Float, default=0)
     reorder_level = db.Column(db.Float, default=10)
     price_per_unit = db.Column(db.Float)
+    supplier_id = db.Column(db.Integer, db.ForeignKey('suppliers.id', name='fk_product_supplier'))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
+    # Relationships
+    supplier = db.relationship('Supplier', backref=db.backref('products', lazy=True))
+
     def __repr__(self):
         return f'<Product {self.name}>'
+
 class Order(db.Model):
     __tablename__ = 'orders'
     id = db.Column(db.Integer, primary_key=True)
-    farmer_id = db.Column(db.Integer, db.ForeignKey('users.id'))
-    distributor_id = db.Column(db.Integer, db.ForeignKey('users.id'))
-    product_id = db.Column(db.Integer, db.ForeignKey('products.id'))
-    quantity = db.Column(db.Float)
-    status = db.Column(db.String(20), default='pending')
-    order_date = db.Column(db.DateTime, default=datetime.utcnow)
-    delivery_date = db.Column(db.DateTime)
+    farmer_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    retailer_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    distributor_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    status = db.Column(db.String(20), default='pending')  # pending, processing, completed, cancelled
+    total_amount = db.Column(db.Float, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    completed_at = db.Column(db.DateTime)
+    notes = db.Column(db.Text)
+    
+    # Relationships
+    farmer = db.relationship('User', foreign_keys=[farmer_id], backref=db.backref('orders_as_farmer', lazy=True))
+    retailer = db.relationship('User', foreign_keys=[retailer_id], backref=db.backref('orders_as_retailer', lazy=True))
+    distributor = db.relationship('User', foreign_keys=[distributor_id], backref=db.backref('orders_as_distributor', lazy=True))
+    items = db.relationship('OrderItem', backref='order', lazy=True, cascade='all, delete-orphan')
 
-    farmer = db.relationship('User', foreign_keys=[farmer_id], backref='orders_as_farmer')
-    distributor = db.relationship('User', foreign_keys=[distributor_id], backref='orders_as_distributor')
-    product = db.relationship('Product', backref='orders')
-
+    @property
+    def status_color(self):
+        status_colors = {
+            'pending': 'warning',
+            'processing': 'info',
+            'completed': 'success',
+            'cancelled': 'danger'
+        }
+        return status_colors.get(self.status, 'secondary')
 
 class RestockOrder(db.Model):
     __tablename__ = 'restock_orders'
     id = db.Column(db.Integer, primary_key=True)
-    product_id = db.Column(db.Integer, db.ForeignKey('products.id'))
-    quantity = db.Column(db.Float)
-    distributor_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    product_id = db.Column(db.Integer, db.ForeignKey('products.id'), nullable=False)
+    quantity = db.Column(db.Float, nullable=False)
+    distributor_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     status = db.Column(db.String(20), default='requested')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-
+    
+    # Relationships
     product = db.relationship('Product', backref='restock_orders')
-    distributor = db.relationship('User')
-
 
 class Supplier(db.Model):
-    __tablename__ = 'supplier'
+    __tablename__ = 'suppliers'  # Fixed tablename to be plural
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     address = db.Column(db.String(200), nullable=False)
+    contact_email = db.Column(db.String(120))
+    contact_phone = db.Column(db.String(20))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+class Cart(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    retailer_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    status = db.Column(db.String(20), default='active')  # active, completed, abandoned
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Relationships
+    retailer = db.relationship('User', backref=db.backref('carts', lazy=True))
+    items = db.relationship('CartItem', backref='cart', lazy=True, cascade='all, delete-orphan')
+
+    @property
+    def total_amount(self):
+        return sum(item.subtotal for item in self.items)
+
+class CartItem(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    cart_id = db.Column(db.Integer, db.ForeignKey('cart.id'), nullable=False)
+    product_id = db.Column(db.Integer, db.ForeignKey('products.id'), nullable=False)
+    quantity = db.Column(db.Integer, nullable=False)
+    price_per_unit = db.Column(db.Float, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    # Relationships
+    product = db.relationship('Product', backref=db.backref('cart_items', lazy=True))
+
+    @property
+    def subtotal(self):
+        return self.quantity * self.price_per_unit
+
+class InventoryItem(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    distributor_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    name = db.Column(db.String(100), nullable=False)
+    category = db.Column(db.String(50), nullable=False)
+    quantity = db.Column(db.Float, nullable=False)
+    unit = db.Column(db.String(20), nullable=False)
+    min_quantity = db.Column(db.Float, nullable=False)
+    price_per_unit = db.Column(db.Float, nullable=False)
+    description = db.Column(db.Text)
+    image = db.Column(db.String(255))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Relationships
+    distributor = db.relationship('User', backref=db.backref('distributor_inventory', lazy=True))
+
+    @property
+    def status(self):
+        if self.quantity <= 0:
+            return 'out_of_stock'
+        elif self.quantity <= self.min_quantity:
+            return 'low_stock'
+        else:
+            return 'in_stock'
+
+    @property
+    def status_color(self):
+        status_colors = {
+            'out_of_stock': 'danger',
+            'low_stock': 'warning',
+            'in_stock': 'success'
+        }
+        return status_colors.get(self.status, 'secondary')
+
+class Delivery(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    order_id = db.Column(db.Integer, db.ForeignKey('orders.id'), nullable=False)
+    distributor_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    status = db.Column(db.String(20), default='scheduled')  # scheduled, in_transit, completed, failed
+    scheduled_date = db.Column(db.DateTime, nullable=False)
+    completed_at = db.Column(db.DateTime)
+    delivery_address = db.Column(db.Text, nullable=False)
+    tracking_number = db.Column(db.String(50), unique=True)
+    notes = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Relationships
+    order = db.relationship('Order', backref=db.backref('order_deliveries', lazy=True))
+    distributor = db.relationship('User', backref=db.backref('distributor_deliveries', lazy=True))
+
+    @property
+    def status_color(self):
+        status_colors = {
+            'scheduled': 'info',
+            'in_transit': 'primary',
+            'completed': 'success',
+            'failed': 'danger'
+        }
+        return status_colors.get(self.status, 'secondary')
+
+class OrderItem(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    order_id = db.Column(db.Integer, db.ForeignKey('orders.id'), nullable=False)
+    product_id = db.Column(db.Integer, db.ForeignKey('products.id'), nullable=False)
+    quantity = db.Column(db.Integer, nullable=False)
+    price_per_unit = db.Column(db.Float, nullable=False)
+
+    # Relationships
+    product = db.relationship('Product', backref=db.backref('order_items', lazy=True))
+
+    @property
+    def subtotal(self):
+        return self.quantity * self.price_per_unit
+
     

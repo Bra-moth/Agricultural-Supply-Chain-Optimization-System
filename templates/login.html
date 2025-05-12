@@ -1,8 +1,5 @@
-{% extends "base.html" %}
-
-{% block title %}Login{% endblock %}
-
-{% block content %}
+{% extends "base.html" %} {% block title %}Login{% endblock %} {% block content
+%}
 <div class="row justify-content-center">
   <div class="col-md-8 col-lg-6">
     <div class="card border-0 shadow-lg">
@@ -14,17 +11,19 @@
           {{ form.hidden_tag() }}
 
           <div class="mb-4">
-            {{ form.username.label(class="form-label fs-5") }}
-            {{ form.username(class="form-control form-control-lg" + (" is-invalid" if form.username.errors else "")) }}
-            {% for error in form.username.errors %}
+            {{ form.username.label(class="form-label fs-5") }} {{
+            form.username(class="form-control form-control-lg" + (" is-invalid"
+            if form.username.errors else "")) }} {% for error in
+            form.username.errors %}
             <div class="invalid-feedback">{{ error }}</div>
             {% endfor %}
           </div>
 
           <div class="mb-4">
-            {{ form.password.label(class="form-label fs-5") }}
-            {{ form.password(class="form-control form-control-lg" + (" is-invalid" if form.password.errors else "")) }}
-            {% for error in form.password.errors %}
+            {{ form.password.label(class="form-label fs-5") }} {{
+            form.password(class="form-control form-control-lg" + (" is-invalid"
+            if form.password.errors else "")) }} {% for error in
+            form.password.errors %}
             <div class="invalid-feedback">{{ error }}</div>
             {% endfor %}
             <div class="form-text text-end">
@@ -42,7 +41,10 @@
 
         <div class="text-center pt-4 border-top">
           <p class="text-muted mb-0">Don't have an account?</p>
-          <a href="{{ url_for('register') }}" class="btn btn-outline-success mt-3">
+          <a
+            href="{{ url_for('register') }}"
+            class="btn btn-outline-success mt-3"
+          >
             Create New Account
           </a>
         </div>

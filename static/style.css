@@ -37,3 +37,17 @@ body {
     background-color: #218838;
     border-color: #1e7e34;
 }
+
+/* Farmer dashboard specific styles */
+.card-header.bg-success {
+    background-color: #28a745!important;
+}
+
+.badge.bg-success {
+    background-color: #28a745;
+}
+
+#crop-table th {
+    background-color: #e9f5ee;
+}
+.status-processing { color: #17a2b8; }

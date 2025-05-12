@@ -3,10 +3,14 @@ content %}
 <section id="dashboard" class="py-5 bg-light">
   <div class="container">
     <h2 class="text-center mb-4">Dashboard</h2>
-    <p class="text-center">Welcome to your dashboard. Manage your agricultural supply chain here.</p>
+    <p class="text-center">
+      Welcome to your dashboard. Manage your agricultural supply chain here.
+    </p>
     {% if current_user.is_authenticated %}
     <div class="text-center">
-      <a href="{{ url_for('dashboard') }}" class="btn btn-success">View Dashboard</a>
+      <a href="{{ url_for('dashboard') }}" class="btn btn-success"
+        >View Dashboard</a
+      >
     </div>
     {% endif %}
   </div>

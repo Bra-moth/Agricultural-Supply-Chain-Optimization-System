@@ -1,0 +1,155 @@
+{% extends "base.html" %} {% block title %}Place Order - {{ crop.name }} -
+Agri-SCM{% endblock %} {% block content %}
+<div class="container py-4">
+  <nav aria-label="breadcrumb" class="mb-4">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item">
+        <a href="{{ url_for('crop_inventory') }}">Crop Inventory</a>
+      </li>
+      <li class="breadcrumb-item">
+        <a href="{{ url_for('crop_detail', crop_id=crop.id) }}"
+          >{{ crop.name }}</a
+        >
+      </li>
+      <li class="breadcrumb-item active">Place Order</li>
+    </ol>
+  </nav>
+
+  <div class="row">
+    <!-- Crop Summary -->
+    <div class="col-md-4">
+      <div class="card shadow-sm mb-4">
+        <div class="card-header bg-light">
+          <h5 class="mb-0">Crop Details</h5>
+        </div>
+        <div class="card-body">
+          {% if crop.image %}
+          <img
+            src="{{ crop.image_url }}"
+            class="img-fluid rounded mb-3"
+            alt="{{ crop.name }}"
+          />
+          {% endif %}
+          <h4>{{ crop.name }}</h4>
+          <p class="text-muted">Variety: {{ crop.variety }}</p>
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <span>Available Quantity:</span>
+            <span class="fw-bold">{{ crop.quantity }} {{ crop.unit }}</span>
+          </div>
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <span>Price per Unit:</span>
+            <span class="fw-bold text-success"
+              >R{{ crop.price_per_unit }}/{{ crop.unit }}</span
+            >
+          </div>
+          <div class="d-flex justify-content-between align-items-center">
+            <span>Farmer:</span>
+            <span class="fw-bold">{{ crop.farmer.username }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Order Form -->
+    <div class="col-md-8">
+      <div class="card shadow-sm">
+        <div class="card-header bg-light">
+          <h5 class="mb-0">Order Details</h5>
+        </div>
+        <div class="card-body">
+          <form method="POST">
+            {{ form.csrf_token }}
+
+            <div class="row g-3">
+              <div class="col-md-6">
+                <div class="form-group">
+                  {{ form.quantity.label(class="form-label") }} {{
+                  form.quantity(class="form-control", type="number", step="0.1",
+                  min="0.1", max=crop.quantity, onchange="updateTotal()",
+                  onkeyup="updateTotal()") }} {% if form.quantity.errors %} {%
+                  for error in form.quantity.errors %}
+                  <span class="text-danger">{{ error }}</span>
+                  {% endfor %} {% endif %}
+                  <small class="form-text text-muted"
+                    >Maximum available: {{ crop.quantity }} {{ crop.unit
+                    }}</small
+                  >
+                </div>
+              </div>
+
+              <div class="col-12">
+                <div class="form-group">
+                  {{ form.delivery_address.label(class="form-label") }} {{
+                  form.delivery_address(class="form-control") }} {% if
+                  form.delivery_address.errors %} {% for error in
+                  form.delivery_address.errors %}
+                  <span class="text-danger">{{ error }}</span>
+                  {% endfor %} {% endif %}
+                </div>
+              </div>
+
+              <div class="col-12">
+                <div class="form-group">
+                  {{ form.notes.label(class="form-label") }} {{
+                  form.notes(class="form-control", rows=3) }} {% if
+                  form.notes.errors %} {% for error in form.notes.errors %}
+                  <span class="text-danger">{{ error }}</span>
+                  {% endfor %} {% endif %}
+                </div>
+              </div>
+            </div>
+
+            <!-- Order Summary -->
+            <div class="card mt-4">
+              <div class="card-body">
+                <h6 class="card-title">Order Summary</h6>
+                <div class="d-flex justify-content-between mb-2">
+                  <span>Subtotal:</span>
+                  <span class="order-subtotal">R0.00</span>
+                </div>
+                <div class="d-flex justify-content-between">
+                  <span class="fw-bold">Total:</span>
+                  <span class="fw-bold order-total">R0.00</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="mt-4">
+              <button type="submit" class="btn btn-success">
+                <i class="bi bi-cart-check me-2"></i>Place Order
+              </button>
+              <a
+                href="{{ url_for('crop_detail', crop_id=crop.id) }}"
+                class="btn btn-secondary"
+              >
+                <i class="bi bi-x-lg me-2"></i>Cancel
+              </a>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %} {% block scripts %}
+<script>
+  function updateTotal() {
+    const quantity = parseFloat(document.getElementById('quantity').value) || 0;
+    const pricePerUnit = {{ crop.price_per_unit }};
+    const subtotal = quantity * pricePerUnit;
+    const total = subtotal;  // Add any additional fees here if needed
+
+    document.querySelector('.order-subtotal').textContent = `R${subtotal.toFixed(2)}`;
+    document.querySelector('.order-total').textContent = `R${total.toFixed(2)}`;
+  }
+
+  // Initialize totals when page loads
+  document.addEventListener('DOMContentLoaded', function() {
+    updateTotal();
+  });
+
+  // Add event listeners for quantity changes
+  document.getElementById('quantity').addEventListener('change', updateTotal);
+  document.getElementById('quantity').addEventListener('keyup', updateTotal);
+</script>
+{% endblock %}

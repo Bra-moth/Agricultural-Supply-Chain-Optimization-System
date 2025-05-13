@@ -1,151 +1,135 @@
 {% extends "base.html" %} {% block title %}{{ crop.name }} Details - Agri-SCM{%
 endblock %} {% block content %}
-<div class="container-fluid py-4">
+<div class="container py-4">
+  <nav aria-label="breadcrumb" class="mb-4">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item">
+        <a href="{{ url_for('crop_inventory') }}">Crop Inventory</a>
+      </li>
+      <li class="breadcrumb-item active">{{ crop.name }}</li>
+    </ol>
+  </nav>
+
   <div class="row">
-    <div class="col-md-8">
-      <div class="card">
+    <!-- Crop Image and Basic Info -->
+    <div class="col-md-5 mb-4">
+      <div class="card shadow-sm">
+        {% if crop.image_path %}
+        <img
+          src="{{ crop.image_url }}"
+          class="card-img-top crop-detail-image"
+          alt="{{ crop.name }}"
+          style="height: 300px; object-fit: cover; cursor: pointer"
+          onclick="openImagePreview(this.src)"
+        />
+        {% else %}
         <div
-          class="card-header d-flex justify-content-between align-items-center"
+          class="card-img-top bg-light d-flex align-items-center justify-content-center"
+          style="height: 300px"
         >
-          <h3 class="mb-0">{{ crop.name }} - {{ crop.variety }}</h3>
-          <div>
+          <i class="bi bi-image text-muted" style="font-size: 4rem"></i>
+        </div>
+        {% endif %}
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h3 class="card-title mb-0">{{ crop.name }}</h3>
+            <span
+              class="badge bg-{{ 'success' if crop.status == 'ready_for_harvest' else 'primary' }} fs-6"
+            >
+              {{ crop.status|replace('_', ' ')|title }}
+            </span>
+          </div>
+          <p class="text-muted mb-2">Variety: {{ crop.variety }}</p>
+          <p class="mb-0">
+            {{ crop.description or 'No description available.' }}
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Crop Details -->
+    <div class="col-md-7">
+      <div class="card shadow-sm mb-4">
+        <div class="card-header bg-light">
+          <h4 class="mb-0">Crop Information</h4>
+        </div>
+        <div class="card-body">
+          <div class="row g-4">
+            <div class="col-sm-6">
+              <div class="detail-item">
+                <label class="text-muted">Quantity</label>
+                <h5>{{ crop.quantity }} {{ crop.unit }}</h5>
+              </div>
+            </div>
+            <div class="col-sm-6">
+              <div class="detail-item">
+                <label class="text-muted">Price per Unit</label>
+                <h5 class="text-success">
+                  R{{ crop.price_per_unit }}/{{ crop.unit }}
+                </h5>
+              </div>
+            </div>
+            <div class="col-sm-6">
+              <div class="detail-item">
+                <label class="text-muted">Planting Date</label>
+                <h5>{{ crop.planting_date.strftime('%Y-%m-%d') }}</h5>
+              </div>
+            </div>
+            <div class="col-sm-6">
+              <div class="detail-item">
+                <label class="text-muted">Expected Harvest</label>
+                <h5>{{ crop.expected_harvest_date.strftime('%Y-%m-%d') }}</h5>
+              </div>
+            </div>
+            {% if crop.harvest_date %}
+            <div class="col-sm-6">
+              <div class="detail-item">
+                <label class="text-muted">Harvest Date</label>
+                <h5>{{ crop.harvest_date.strftime('%Y-%m-%d') }}</h5>
+              </div>
+            </div>
+            {% endif %}
+            <div class="col-sm-6">
+              <div class="detail-item">
+                <label class="text-muted">Current Market Price</label>
+                <h5 class="text-success">
+                  R{{ market_price }}/{{ crop.unit }}
+                </h5>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div class="card shadow-sm">
+        <div class="card-header bg-light">
+          <h4 class="mb-0">Actions</h4>
+        </div>
+        <div class="card-body">
+          <div class="d-flex gap-2">
+            {% if current_user.role == 'farmer' %}
             <a
               href="{{ url_for('edit_crop', crop_id=crop.id) }}"
               class="btn btn-primary"
             >
-              <i class="bi bi-pencil"></i> Edit
+              <i class="bi bi-pencil me-2"></i>Edit Crop
             </a>
             {% if crop.status == 'ready_for_harvest' %}
             <button
               class="btn btn-success"
               onclick="harvestCrop({{ crop.id }})"
             >
-              <i class="bi bi-scissors"></i> Harvest
+              <i class="bi bi-scissors me-2"></i>Harvest Crop
             </button>
-            {% endif %}
-          </div>
-        </div>
-        <div class="card-body">
-          <div class="row">
-            <div class="col-md-6">
-              <h5>Crop Information</h5>
-              <table class="table">
-                <tr>
-                  <th>Status</th>
-                  <td>
-                    <span
-                      class="badge bg-{{ 'success' if crop.status == 'ready_for_harvest' else 'primary' }}"
-                    >
-                      {{ crop.status|replace('_', ' ')|title }}
-                    </span>
-                  </td>
-                </tr>
-                <tr>
-                  <th>Planting Date</th>
-                  <td>{{ crop.planting_date.strftime('%Y-%m-%d') }}</td>
-                </tr>
-                <tr>
-                  <th>Expected Harvest</th>
-                  <td>{{ crop.expected_harvest_date.strftime('%Y-%m-%d') }}</td>
-                </tr>
-                <tr>
-                  <th>Quantity</th>
-                  <td>{{ crop.quantity }} {{ crop.unit }}</td>
-                </tr>
-                <tr>
-                  <th>Notes</th>
-                  <td>{{ crop.notes or 'No notes available' }}</td>
-                </tr>
-              </table>
-            </div>
-            <div class="col-md-6">
-              {% if crop.image_path %}
-              <img
-                src="{{ url_for('static', filename='uploads/' + crop.image_path) }}"
-                class="img-fluid rounded"
-                alt="{{ crop.name }}"
-              />
-              {% endif %}
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="col-md-4">
-      <!-- Market Information -->
-      <div class="card mb-4">
-        <div class="card-header">
-          <h5 class="mb-0">Market Information</h5>
-        </div>
-        <div class="card-body">
-          <div class="d-flex justify-content-between align-items-center mb-3">
-            <span>Current Market Price</span>
-            <span class="badge bg-success"
-              >R{{ market_price }}/{{ crop.unit }}</span
+            {% endif %} {% endif %} {% if current_user.role == 'retailer' and
+            crop.status == 'ready_for_harvest' %}
+            <a
+              href="{{ url_for('place_order', crop_id=crop.id) }}"
+              class="btn btn-success"
             >
-          </div>
-          <div class="d-flex justify-content-between align-items-center">
-            <span>Estimated Value</span>
-            <span class="text-success fw-bold"
-              >R{{ (market_price * crop.quantity)|round(2) }}</span
-            >
-          </div>
-        </div>
-      </div>
-
-      <!-- Growth Timeline -->
-      <div class="card">
-        <div class="card-header">
-          <h5 class="mb-0">Growth Timeline</h5>
-        </div>
-        <div class="card-body">
-          <div class="timeline">
-            <div class="timeline-item">
-              <div class="timeline-marker bg-success"></div>
-              <div class="timeline-content">
-                <h6 class="mb-0">Planted</h6>
-                <small class="text-muted"
-                  >{{ crop.planting_date.strftime('%Y-%m-%d') }}</small
-                >
-              </div>
-            </div>
-            {% if crop.status == 'growing' %}
-            <div class="timeline-item">
-              <div class="timeline-marker bg-primary"></div>
-              <div class="timeline-content">
-                <h6 class="mb-0">Growing</h6>
-                <small class="text-muted">In progress</small>
-              </div>
-            </div>
-            {% endif %} {% if crop.status == 'ready_for_harvest' %}
-            <div class="timeline-item">
-              <div class="timeline-marker bg-warning"></div>
-              <div class="timeline-content">
-                <h6 class="mb-0">Ready for Harvest</h6>
-                <small class="text-muted">Now</small>
-              </div>
-            </div>
-            {% endif %} {% if crop.status == 'harvested' %}
-            <div class="timeline-item">
-              <div class="timeline-marker bg-success"></div>
-              <div class="timeline-content">
-                <h6 class="mb-0">Harvested</h6>
-                <small class="text-muted"
-                  >{{ crop.harvest_date.strftime('%Y-%m-%d') }}</small
-                >
-              </div>
-            </div>
-            {% endif %} {% if crop.status != 'harvested' %}
-            <div class="timeline-item">
-              <div class="timeline-marker bg-light"></div>
-              <div class="timeline-content">
-                <h6 class="mb-0">Expected Harvest</h6>
-                <small class="text-muted"
-                  >{{ crop.expected_harvest_date.strftime('%Y-%m-%d') }}</small
-                >
-              </div>
-            </div>
+              <i class="bi bi-cart-plus me-2"></i>Place Order
+            </a>
             {% endif %}
           </div>
         </div>
@@ -153,44 +137,50 @@ endblock %} {% block content %}
     </div>
   </div>
 </div>
+
+<!-- Image Preview Modal -->
+<div class="modal fade" id="imagePreviewModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">{{ crop.name }} Image</h5>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+        ></button>
+      </div>
+      <div class="modal-body text-center">
+        <img id="previewImage" src="" class="img-fluid" alt="{{ crop.name }}" />
+      </div>
+    </div>
+  </div>
+</div>
 {% endblock %} {% block styles %}
 <style>
-  .timeline {
-    position: relative;
-    padding: 20px 0;
+  .detail-item {
+    padding: 10px;
+    background-color: #f8f9fa;
+    border-radius: 8px;
   }
-
-  .timeline-item {
-    position: relative;
-    padding-left: 40px;
-    margin-bottom: 20px;
+  .detail-item label {
+    font-size: 0.875rem;
+    margin-bottom: 4px;
   }
-
-  .timeline-marker {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 15px;
-    height: 15px;
-    border-radius: 50%;
-  }
-
-  .timeline-item:not(:last-child):before {
-    content: "";
-    position: absolute;
-    left: 7px;
-    top: 15px;
-    height: calc(100% + 5px);
-    width: 2px;
-    background-color: #e9ecef;
-  }
-
-  .timeline-content {
-    padding-left: 15px;
+  .detail-item h5 {
+    margin-bottom: 0;
   }
 </style>
 {% endblock %} {% block scripts %}
 <script>
+  function openImagePreview(src) {
+    const modal = new bootstrap.Modal(
+      document.getElementById("imagePreviewModal")
+    );
+    document.getElementById("previewImage").src = src;
+    modal.show();
+  }
+
   function harvestCrop(cropId) {
     if (confirm("Are you sure you want to mark this crop as harvested?")) {
       fetch(`/api/harvest_crop/${cropId}`, {

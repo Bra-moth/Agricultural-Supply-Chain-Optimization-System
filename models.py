@@ -33,16 +33,26 @@ class Crop(db.Model):
     farmer_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     name = db.Column(db.String(100), nullable=False)
     variety = db.Column(db.String(100))
-    quantity = db.Column(db.Float, nullable=False)
-    unit = db.Column(db.String(20), nullable=False)
+    quantity = db.Column(db.Float, nullable=False, default=0)
+    unit = db.Column(db.String(20), nullable=False, default='kg')
     planting_date = db.Column(db.DateTime, nullable=False)
     expected_harvest_date = db.Column(db.DateTime, nullable=False)
     harvest_date = db.Column(db.DateTime)
     status = db.Column(db.String(50), default='growing')  # growing, ready_for_harvest, harvested
-    image_path = db.Column(db.String(255))
-    notes = db.Column(db.Text)
+    image = db.Column(db.String(255))  # Store the filename of the uploaded image
+    price_per_unit = db.Column(db.Float, default=0)  # Price in Rands
+    description = db.Column(db.Text)
+    planting_season = db.Column(db.String(50))  # Store the planting season
+    harvest_period = db.Column(db.Integer)  # Store the harvest period in days
+    yield_per_acre = db.Column(db.Float)  # Store the expected yield per acre
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    @property
+    def image_url(self):
+        if self.image:
+            return f'/static/uploads/{self.image}'
+        return None
 
 class Inventory(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -98,7 +108,7 @@ class Order(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     farmer_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     retailer_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    distributor_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    distributor_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)  # Can be null initially
     status = db.Column(db.String(20), default='pending')  # pending, processing, completed, cancelled
     total_amount = db.Column(db.Float, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -235,17 +245,28 @@ class Delivery(db.Model):
         return status_colors.get(self.status, 'secondary')
 
 class OrderItem(db.Model):
+    __tablename__ = 'order_items'
     id = db.Column(db.Integer, primary_key=True)
     order_id = db.Column(db.Integer, db.ForeignKey('orders.id'), nullable=False)
-    product_id = db.Column(db.Integer, db.ForeignKey('products.id'), nullable=False)
-    quantity = db.Column(db.Integer, nullable=False)
+    crop_id = db.Column(db.Integer, db.ForeignKey('crops.id'), nullable=True)
+    product_id = db.Column(db.Integer, db.ForeignKey('products.id'), nullable=True)
+    quantity = db.Column(db.Float, nullable=False)
     price_per_unit = db.Column(db.Float, nullable=False)
-
+    
     # Relationships
+    crop = db.relationship('Crop', backref=db.backref('order_items', lazy=True))
     product = db.relationship('Product', backref=db.backref('order_items', lazy=True))
-
+    
     @property
-    def subtotal(self):
+    def total_amount(self):
         return self.quantity * self.price_per_unit
+        
+    @property
+    def item_name(self):
+        if self.crop:
+            return self.crop.name
+        elif self.product:
+            return self.product.name
+        return "Unknown Item"
 
     

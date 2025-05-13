@@ -138,6 +138,10 @@ class CreateOrderForm(FlaskForm):
         DataRequired(),
         NumberRange(min=0.1, message='Quantity must be greater than 0')
     ])
+    notes = TextAreaField('Order Notes', validators=[
+        Optional(),
+        Length(max=500, message='Notes must be less than 500 characters')
+    ])
     submit = SubmitField('Create Order')
 
     def __init__(self, *args, **kwargs):
@@ -147,10 +151,10 @@ class CreateOrderForm(FlaskForm):
             (farmer.id, f"{farmer.username} ({farmer.location})")
             for farmer in User.query.filter_by(role='farmer').all()
         ]
-        # Dynamically populate the product_id field with products
+        # Dynamically populate the product_id field with available products
         self.product_id.choices = [
-            (product.id, f"{product.name} (${product.price_per_unit:.2f}/{product.unit})")
-            for product in Product.query.all()
+            (product.id, f"{product.name} ({product.price_per_unit:.2f} R/{product.unit})")
+            for product in Product.query.filter(Product.current_stock > 0).all()
         ]
 
 class PlaceOrderForm(FlaskForm):

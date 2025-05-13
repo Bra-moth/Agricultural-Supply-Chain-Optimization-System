@@ -277,64 +277,144 @@ endblock %} {% block content %}
   function addToCart(productId) {
     // Add product to cart
     fetch(`/api/products/${productId}`)
-      .then((response) => response.json())
-      .then((product) => {
-        cart.push(product);
-        updateCartDisplay();
-      });
+        .then(response => response.json())
+        .then(product => {
+            // Check if product already in cart
+            const existingItem = cart.find(item => item.id === product.id);
+            if (existingItem) {
+                existingItem.quantity = Math.min(
+                    existingItem.quantity + 1,
+                    product.current_stock
+                );
+            } else {
+                product.quantity = 1;
+                cart.push(product);
+            }
+            updateCartDisplay();
+        })
+        .catch(error => {
+            console.error('Error adding to cart:', error);
+            alert('Failed to add product to cart. Please try again.');
+        });
   }
 
   function updateCartDisplay() {
     const cartContainer = document.getElementById("cart-items");
-    cartContainer.innerHTML = cart
-      .map(
-        (item) => `
-            <div class="list-group-item">
-                <div class="d-flex w-100 justify-content-between">
-                    <h6 class="mb-1">${item.name}</h6>
-                    <small>R${item.price_per_unit}</small>
-                </div>
-                <div class="d-flex align-items-center">
-                    <input type="number" class="form-control form-control-sm w-25"
-                           value="1" min="1" max="${item.current_stock}">
-                    <button class="btn btn-sm btn-danger ms-2"
-                            onclick="removeFromCart(${item.id})">
-                        <i class="bi bi-trash"></i>
-                    </button>
-                </div>
+    if (cart.length === 0) {
+        cartContainer.innerHTML = `
+            <div class="text-center text-muted py-3">
+                <i class="bi bi-cart3 fs-4"></i>
+                <p class="mb-0">Your cart is empty</p>
             </div>
-        `
-      )
-      .join("");
+        `;
+        return;
+    }
+
+    let total = 0;
+    cartContainer.innerHTML = cart
+        .map(item => {
+            const subtotal = item.quantity * item.price_per_unit;
+            total += subtotal;
+            return `
+                <div class="list-group-item">
+                    <div class="d-flex w-100 justify-content-between mb-2">
+                        <h6 class="mb-0">${item.name}</h6>
+                        <small>R${item.price_per_unit}/unit</small>
+                    </div>
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div class="d-flex align-items-center" style="width: 120px;">
+                            <button class="btn btn-sm btn-outline-secondary"
+                                onclick="updateQuantity(${item.id}, ${item.quantity - 1})"
+                                ${item.quantity <= 1 ? 'disabled' : ''}>
+                                <i class="bi bi-dash"></i>
+                            </button>
+                            <input type="number" class="form-control form-control-sm mx-2"
+                                value="${item.quantity}"
+                                min="1"
+                                max="${item.current_stock}"
+                                onchange="updateQuantity(${item.id}, this.value)">
+                            <button class="btn btn-sm btn-outline-secondary"
+                                onclick="updateQuantity(${item.id}, ${item.quantity + 1})"
+                                ${item.quantity >= item.current_stock ? 'disabled' : ''}>
+                                <i class="bi bi-plus"></i>
+                            </button>
+                        </div>
+                        <div class="d-flex align-items-center">
+                            <span class="me-3">R${subtotal.toFixed(2)}</span>
+                            <button class="btn btn-sm btn-danger"
+                                onclick="removeFromCart(${item.id})">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        })
+        .join("") + `
+        <div class="list-group-item bg-light">
+            <div class="d-flex justify-content-between align-items-center">
+                <strong>Total:</strong>
+                <strong>R${total.toFixed(2)}</strong>
+            </div>
+        </div>
+    `;
+  }
+
+  function updateQuantity(productId, newQuantity) {
+    const item = cart.find(item => item.id === productId);
+    if (!item) return;
+
+    newQuantity = parseInt(newQuantity);
+    if (isNaN(newQuantity) || newQuantity < 1) {
+        newQuantity = 1;
+    } else if (newQuantity > item.current_stock) {
+        newQuantity = item.current_stock;
+        alert(`Only ${item.current_stock} units available`);
+    }
+
+    item.quantity = newQuantity;
+    updateCartDisplay();
   }
 
   function removeFromCart(productId) {
-    cart = cart.filter((item) => item.id !== productId);
+    cart = cart.filter(item => item.id !== productId);
     updateCartDisplay();
   }
 
   function checkout() {
     if (cart.length === 0) {
-      alert("Your cart is empty!");
-      return;
+        alert("Your cart is empty!");
+        return;
     }
+
     // Process checkout
     fetch("/api/checkout", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ items: cart }),
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+            items: cart.map(item => ({
+                id: item.id,
+                quantity: item.quantity
+            }))
+        }),
     })
-      .then((response) => response.json())
-      .then((data) => {
+    .then(response => response.json())
+    .then(data => {
         if (data.success) {
-          cart = [];
-          updateCartDisplay();
-          alert("Order placed successfully!");
-          location.reload();
+            cart = [];
+            updateCartDisplay();
+            alert("Order placed successfully!");
+            location.reload();
+        } else {
+            alert(data.error || "Failed to place order. Please try again.");
         }
-      });
+    })
+    .catch(error => {
+        console.error('Checkout error:', error);
+        alert("An error occurred during checkout. Please try again.");
+    });
   }
 
   // Initialize charts

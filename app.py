@@ -15,6 +15,7 @@ from models import User, Crop, Order, Product, RestockOrder, Inventory, Delivery
 from forms import LoginForm, RegistrationForm, CropForm, CreateOrderForm, PlaceOrderForm
 from sqlalchemy import func
 import random
+from PIL import Image
 
 app = Flask(__name__)
 
@@ -455,15 +456,72 @@ def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 def save_crop_image(form_image):
-    if form_image and form_image.filename and allowed_file(form_image.filename):
+    """Save an uploaded crop image with proper validation and error handling."""
+    if not form_image:
+        return None
+    
+    if not form_image.filename:
+        return None
+    
+    try:
+        # Validate file type
+        if not allowed_file(form_image.filename):
+            raise ValueError(f"Invalid file type. Allowed types are: {', '.join(ALLOWED_EXTENSIONS)}")
+        
+        # Create a secure filename
         filename = secure_filename(form_image.filename)
-        # Add timestamp to filename to prevent duplicates
         base, ext = os.path.splitext(filename)
-        filename = f"{base}_{int(time.time())}{ext}"
+        filename = f"{base}_{current_user.id}_{int(time.time())}{ext}"
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        
+        # Check file size before saving
+        form_image.seek(0, os.SEEK_END)
+        size = form_image.tell()
+        if size > app.config['MAX_CONTENT_LENGTH']:
+            raise ValueError(f"File size exceeds maximum limit of {app.config['MAX_CONTENT_LENGTH'] // (1024*1024)}MB")
+        
+        # Reset file pointer and save
+        form_image.seek(0)
+        
+        # Ensure upload directory exists
+        os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+        
+        # Save the file
         form_image.save(filepath)
+        
+        # Verify the saved file
+        if not os.path.exists(filepath):
+            raise IOError("Failed to save the uploaded file")
+            
+        # Verify file integrity and optimize image
+        try:
+            with Image.open(filepath) as img:
+                img.verify()
+                # Reopen image after verify (verify closes the file)
+                img = Image.open(filepath)
+                # Convert to RGB if needed
+                if img.mode in ('RGBA', 'P'):
+                    img = img.convert('RGB')
+                # Optimize and save
+                img.save(filepath, 'JPEG', quality=85, optimize=True)
+        except Exception as e:
+            if os.path.exists(filepath):
+                os.remove(filepath)
+            raise ValueError(f"Invalid image file: {str(e)}")
+            
         return filename
-    return None
+        
+    except (ValueError, IOError) as e:
+        # Clean up any partially saved file
+        if 'filepath' in locals() and os.path.exists(filepath):
+            os.remove(filepath)
+        raise
+    except Exception as e:
+        # Log unexpected errors
+        app.logger.error(f"Unexpected error during image upload: {str(e)}")
+        if 'filepath' in locals() and os.path.exists(filepath):
+            os.remove(filepath)
+        raise ValueError("An unexpected error occurred while processing the image")
 
 @app.route('/add_crop', methods=['GET', 'POST'])
 @login_required
@@ -476,7 +534,17 @@ def add_crop():
     if form.validate_on_submit():
         try:
             # Handle image upload
-            image_filename = save_crop_image(form.image.data)
+            image_filename = None
+            if form.image.data:
+                try:
+                    image_filename = save_crop_image(form.image.data)
+                except ValueError as e:
+                    flash(str(e), 'danger')
+                    return render_template('add_crop.html', form=form)
+                except Exception as e:
+                    app.logger.error(f"Error processing image upload: {str(e)}")
+                    flash('Error processing image upload. Please try again.', 'danger')
+                    return render_template('add_crop.html', form=form)
             
             crop = Crop(
                 farmer_id=current_user.id,
@@ -488,7 +556,10 @@ def add_crop():
                 expected_harvest_date=form.expected_harvest_date.data,
                 price_per_unit=form.price_per_unit.data,
                 description=form.description.data,
-                image=image_filename
+                image=image_filename,
+                planting_season=form.planting_season.data,
+                harvest_period=form.harvest_period.data,
+                yield_per_acre=form.yield_per_acre.data
             )
             
             db.session.add(crop)
@@ -498,7 +569,8 @@ def add_crop():
             
         except Exception as e:
             db.session.rollback()
-            flash(f'Error adding crop: {str(e)}', 'danger')
+            app.logger.error(f"Error adding crop: {str(e)}")
+            flash('An error occurred while adding the crop. Please try again.', 'danger')
             
     return render_template('add_crop.html', form=form)
 
@@ -516,20 +588,51 @@ def edit_crop(crop_id):
     
     if form.validate_on_submit():
         try:
-            # Handle image upload
-            if form.image.data:
-                # Delete old image if it exists
-                if crop.image:
+            # Handle image removal
+            if request.form.get('remove_image') == 'true' and crop.image:
+                try:
                     old_image_path = os.path.join(app.config['UPLOAD_FOLDER'], crop.image)
                     if os.path.exists(old_image_path):
                         os.remove(old_image_path)
-                
-                # Save new image
-                image_filename = save_crop_image(form.image.data)
-                crop.image = image_filename
+                    crop.image = None
+                except Exception as e:
+                    app.logger.error(f"Error removing image: {str(e)}")
+                    flash('Error removing the image. Please try again.', 'danger')
+                    return render_template('edit_crop.html', form=form, crop=crop)
+            
+            # Handle new image upload
+            if form.image.data:
+                try:
+                    # Delete old image if it exists
+                    if crop.image:
+                        old_image_path = os.path.join(app.config['UPLOAD_FOLDER'], crop.image)
+                        if os.path.exists(old_image_path):
+                            os.remove(old_image_path)
+                    
+                    # Save new image
+                    image_filename = save_crop_image(form.image.data)
+                    if image_filename:
+                        crop.image = image_filename
+                except ValueError as e:
+                    flash(str(e), 'danger')
+                    return render_template('edit_crop.html', form=form, crop=crop)
+                except Exception as e:
+                    app.logger.error(f"Error processing image upload: {str(e)}")
+                    flash('Error processing image upload. Please try again.', 'danger')
+                    return render_template('edit_crop.html', form=form, crop=crop)
             
             # Update other fields
-            form.populate_obj(crop)
+            crop.name = form.name.data
+            crop.variety = form.variety.data
+            crop.quantity = form.quantity.data
+            crop.unit = form.unit.data
+            crop.planting_date = form.planting_date.data
+            crop.expected_harvest_date = form.expected_harvest_date.data
+            crop.price_per_unit = form.price_per_unit.data
+            crop.description = form.description.data
+            crop.planting_season = form.planting_season.data
+            crop.harvest_period = form.harvest_period.data
+            crop.yield_per_acre = form.yield_per_acre.data
             
             db.session.commit()
             flash('Crop updated successfully!', 'success')
@@ -537,7 +640,8 @@ def edit_crop(crop_id):
             
         except Exception as e:
             db.session.rollback()
-            flash(f'Error updating crop: {str(e)}', 'danger')
+            app.logger.error(f"Error updating crop: {str(e)}")
+            flash('An error occurred while updating the crop. Please try again.', 'danger')
     
     return render_template('edit_crop.html', form=form, crop=crop)
 
@@ -553,11 +657,35 @@ Crop.image_url = image_url
 @app.route('/orders')
 @login_required
 def orders():
-    if current_user.role == 'farmer':
-        orders = Order.query.filter_by(farmer_id=current_user.id).all()
-    else:
-        orders = Order.query.filter_by(distributor_id=current_user.id).all()
-    return render_template('orders.html', orders=orders)
+    try:
+        # Base query
+        query = Order.query
+
+        # Filter based on user role
+        if current_user.role == 'farmer':
+            # Farmers see orders where they are the supplier
+            orders = query.filter_by(farmer_id=current_user.id)\
+                        .order_by(Order.created_at.desc()).all()
+            
+        elif current_user.role == 'distributor':
+            # Distributors see orders they're involved in
+            orders = query.filter_by(distributor_id=current_user.id)\
+                        .order_by(Order.created_at.desc()).all()
+            
+        elif current_user.role == 'retailer':
+            # Retailers see orders they've placed
+            orders = query.filter_by(retailer_id=current_user.id)\
+                        .order_by(Order.created_at.desc()).all()
+        else:
+            flash('Invalid user role.', 'danger')
+            return redirect(url_for('home'))
+
+        return render_template('orders.html', orders=orders)
+        
+    except Exception as e:
+        app.logger.error(f"Error loading orders: {str(e)}")
+        flash('An error occurred while loading orders.', 'danger')
+        return redirect(url_for('dashboard'))
 
 @app.route('/market-prices')  # Note the dash (-) not underscore (_)
 @login_required
@@ -700,41 +828,152 @@ def inject_now():
 # API Endpoints for Dashboard Functionality
 @app.route('/api/products/<int:product_id>')
 @login_required
+@role_required('retailer')
 def get_product(product_id):
-    product = Product.query.get_or_404(product_id)
-    return jsonify({
-        'id': product.id,
-        'name': product.name,
-        'price_per_unit': product.price_per_unit,
-        'current_stock': product.current_stock,
-        'unit': product.unit
-    })
+    try:
+        product = Product.query.get_or_404(product_id)
+        return jsonify({
+            'id': product.id,
+            'name': product.name,
+            'description': product.description,
+            'category': product.category,
+            'unit': product.unit,
+            'current_stock': product.current_stock,
+            'price_per_unit': product.price_per_unit
+        })
+    except Exception as e:
+        app.logger.error(f'Error getting product {product_id}: {str(e)}')
+        return jsonify({'error': 'Failed to get product details'}), 500
 
 @app.route('/api/checkout', methods=['POST'])
 @login_required
+@role_required('retailer')
 def checkout():
     data = request.get_json()
     try:
-        # Create new order
-        for item in data['items']:
-            order = Order(
-                product_id=item['id'],
-                retailer_id=current_user.id,
-                quantity=item['quantity'],
-                status='pending',
-                total_price=item['quantity'] * item['price_per_unit']
-            )
-            db.session.add(order)
-            
-            # Update product stock
+        # Start a transaction
+        cart_items = data.get('items', [])
+        if not cart_items:
+            return jsonify({'success': False, 'error': 'Cart is empty'})
+
+        # Get the nearest available distributor
+        distributor = User.query.filter_by(
+            role='distributor',
+            # Add any additional filters for distributor selection
+        ).first()
+
+        if not distributor:
+            return jsonify({
+                'success': False,
+                'error': 'No distributors available. Please try again later.'
+            })
+
+        # Create a new order
+        order = Order(
+            retailer_id=current_user.id,
+            distributor_id=distributor.id,  # Assign the distributor
+            status='pending',
+            total_amount=0,  # Will be calculated from items
+            created_at=datetime.utcnow()
+        )
+        db.session.add(order)
+        db.session.flush()  # Get the order ID
+
+        total_amount = 0
+        farmer_orders = {}  # Group items by farmer
+
+        for item in cart_items:
+            # Get product and validate availability
             product = Product.query.get(item['id'])
-            product.current_stock -= item['quantity']
+            if not product:
+                db.session.rollback()
+                return jsonify({'success': False, 'error': f'Product {item["id"]} not found'})
+
+            quantity = int(item.get('quantity', 1))
+            if quantity > product.current_stock:
+                db.session.rollback()
+                return jsonify({
+                    'success': False, 
+                    'error': f'Insufficient stock for {product.name}. Available: {product.current_stock}'
+                })
+
+            # Create order item
+            order_item = OrderItem(
+                order_id=order.id,
+                product_id=product.id,
+                quantity=quantity,
+                price_per_unit=product.price_per_unit
+            )
+            db.session.add(order_item)
+
+            # Update product stock
+            product.current_stock -= quantity
+            subtotal = quantity * product.price_per_unit
+            total_amount += subtotal
+
+            # Group items by farmer for creating farmer-specific orders
+            if product.farmer_id not in farmer_orders:
+                farmer_orders[product.farmer_id] = {
+                    'items': [],
+                    'total': 0
+                }
+            farmer_orders[product.farmer_id]['items'].append({
+                'product_id': product.id,
+                'quantity': quantity,
+                'price_per_unit': product.price_per_unit
+            })
+            farmer_orders[product.farmer_id]['total'] += subtotal
+
+        # Update order total
+        order.total_amount = total_amount
+
+        # Create farmer-specific orders
+        for farmer_id, order_data in farmer_orders.items():
+            farmer_order = Order(
+                farmer_id=farmer_id,
+                retailer_id=current_user.id,
+                distributor_id=distributor.id,
+                status='pending',
+                total_amount=order_data['total'],
+                created_at=datetime.utcnow(),
+                parent_order_id=order.id  # Link to parent order
+            )
+            db.session.add(farmer_order)
             
+            # Create order items for farmer order
+            for item in order_data['items']:
+                farmer_order_item = OrderItem(
+                    order_id=farmer_order.id,
+                    product_id=item['product_id'],
+                    quantity=item['quantity'],
+                    price_per_unit=item['price_per_unit']
+                )
+                db.session.add(farmer_order_item)
+
+        # Create initial delivery record
+        delivery = Delivery(
+            order_id=order.id,
+            distributor_id=distributor.id,
+            status='scheduled',
+            scheduled_date=datetime.utcnow() + timedelta(days=1),  # Schedule for tomorrow
+            delivery_address=current_user.location,  # Use retailer's address
+            tracking_number=f'TRK{order.id}{int(time.time())}'[-12:]  # Generate tracking number
+        )
+        db.session.add(delivery)
+        
+        # Commit the transaction
         db.session.commit()
-        return jsonify({'success': True})
+        
+        return jsonify({
+            'success': True,
+            'order_id': order.id,
+            'message': 'Order placed successfully'
+        })
+
     except Exception as e:
         db.session.rollback()
-        return jsonify({'success': False, 'error': str(e)})
+        app.logger.error(f'Checkout error: {str(e)}')
+        return jsonify({'success': False, 'error': 'An error occurred during checkout'})
 
 # Farmer API Endpoints
 @app.route('/api/harvest_crop/<int:crop_id>', methods=['POST'])
@@ -1108,5 +1347,167 @@ def mark_ready_for_harvest(crop_id):
         db.session.rollback()
         return jsonify({'success': False, 'error': str(e)}), 500
 
+def cleanup_orphaned_images():
+    """Remove image files that are not referenced by any crop."""
+    try:
+        # Get all image filenames from the database
+        used_images = set()
+        crops = Crop.query.all()
+        for crop in crops:
+            if crop.image:
+                used_images.add(crop.image)
+        
+        # Get all image files from the uploads directory
+        upload_path = app.config['UPLOAD_FOLDER']
+        for filename in os.listdir(upload_path):
+            if filename.lower().endswith(tuple(ALLOWED_EXTENSIONS)):
+                filepath = os.path.join(upload_path, filename)
+                # If the file is not referenced in the database and is older than 24 hours, delete it
+                if filename not in used_images:
+                    file_age = time.time() - os.path.getctime(filepath)
+                    if file_age > 86400:  # 24 hours in seconds
+                        try:
+                            os.remove(filepath)
+                            app.logger.info(f"Removed orphaned image: {filename}")
+                        except Exception as e:
+                            app.logger.error(f"Error removing orphaned image {filename}: {str(e)}")
+    except Exception as e:
+        app.logger.error(f"Error during image cleanup: {str(e)}")
+
+# Schedule cleanup to run daily
+def init_app(app):
+    with app.app_context():
+        cleanup_orphaned_images()  # Run cleanup once at startup
+
+# Add cleanup after successful crop deletion
+@app.route('/delete_crop/<int:crop_id>', methods=['POST'])
+@login_required
+def delete_crop(crop_id):
+    crop = Crop.query.get_or_404(crop_id)
+    
+    if crop.farmer_id != current_user.id:
+        flash('You can only delete your own crops.', 'danger')
+        return redirect(url_for('crop_inventory'))
+    
+    try:
+        # Delete the image file if it exists
+        if crop.image:
+            image_path = os.path.join(app.config['UPLOAD_FOLDER'], crop.image)
+            if os.path.exists(image_path):
+                os.remove(image_path)
+        
+        db.session.delete(crop)
+        db.session.commit()
+        
+        # Run cleanup after successful deletion
+        cleanup_orphaned_images()
+        
+        flash('Crop deleted successfully!', 'success')
+        return redirect(url_for('crop_inventory'))
+        
+    except Exception as e:
+        db.session.rollback()
+        app.logger.error(f"Error deleting crop: {str(e)}")
+        flash('An error occurred while deleting the crop. Please try again.', 'danger')
+        return redirect(url_for('crop_detail', crop_id=crop.id))
+
+@app.route('/api/orders/<int:order_id>/status', methods=['PUT'])
+@login_required
+def update_order_status(order_id):
+    try:
+        data = request.get_json()
+        status = data.get('status')
+        if not status:
+            return jsonify({'success': False, 'message': 'Status is required'})
+
+        # Get the order and validate permissions
+        order = Order.query.get_or_404(order_id)
+        
+        # Only distributors can update order status
+        if current_user.role != 'distributor' or order.distributor_id != current_user.id:
+            return jsonify({'success': False, 'message': 'Unauthorized'}), 403
+
+        # Validate status transition
+        valid_transitions = {
+            'pending': ['processing', 'cancelled'],
+            'processing': ['completed', 'cancelled'],
+            'completed': [],
+            'cancelled': []
+        }
+
+        if status not in valid_transitions.get(order.status, []):
+            return jsonify({
+                'success': False,
+                'message': f'Invalid status transition from {order.status} to {status}'
+            })
+
+        # Update main order status
+        order.status = status
+        if status == 'completed':
+            order.completed_at = datetime.utcnow()
+
+        # Update child orders status
+        for child_order in order.child_orders:
+            child_order.status = status
+            if status == 'completed':
+                child_order.completed_at = datetime.utcnow()
+
+        # Update delivery status if needed
+        if order.order_deliveries:
+            delivery = order.order_deliveries[0]
+            if status == 'processing':
+                delivery.status = 'scheduled'
+            elif status == 'completed':
+                delivery.status = 'delivered'
+                delivery.completed_at = datetime.utcnow()
+            elif status == 'cancelled':
+                delivery.status = 'cancelled'
+
+        db.session.commit()
+        return jsonify({'success': True})
+
+    except Exception as e:
+        db.session.rollback()
+        app.logger.error(f'Error updating order status: {str(e)}')
+        return jsonify({'success': False, 'message': 'An error occurred'}), 500
+
+@app.route('/api/orders/<int:order_id>/cancel', methods=['POST'])
+@login_required
+def cancel_order(order_id):
+    try:
+        # Get the order and validate permissions
+        order = Order.query.get_or_404(order_id)
+        
+        # Only retailers can cancel their own pending orders
+        if current_user.role != 'retailer' or order.retailer_id != current_user.id:
+            return jsonify({'success': False, 'message': 'Unauthorized'}), 403
+
+        if order.status != 'pending':
+            return jsonify({
+                'success': False,
+                'message': 'Only pending orders can be cancelled'
+            })
+
+        # Cancel main order
+        order.status = 'cancelled'
+        
+        # Cancel child orders
+        for child_order in order.child_orders:
+            child_order.status = 'cancelled'
+
+        # Cancel delivery if exists
+        if order.order_deliveries:
+            delivery = order.order_deliveries[0]
+            delivery.status = 'cancelled'
+
+        db.session.commit()
+        return jsonify({'success': True})
+
+    except Exception as e:
+        db.session.rollback()
+        app.logger.error(f'Error cancelling order: {str(e)}')
+        return jsonify({'success': False, 'message': 'An error occurred'}), 500
+
 if __name__ == '__main__':
+    init_app(app)  # Initialize the app
     app.run(debug=True)

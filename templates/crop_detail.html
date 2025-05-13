@@ -15,19 +15,18 @@ endblock %} {% block content %}
     <div class="col-md-5 mb-4">
       <div class="card shadow-sm">
         {% if crop.image %}
-        <img
-          src="{{ crop.image_url }}"
-          class="card-img-top crop-detail-image"
-          alt="{{ crop.name }}"
-          style="height: 300px; object-fit: cover; cursor: pointer"
-          onclick="openImagePreview(this.src)"
-        />
-        {% else %}
-        <div
-          class="card-img-top bg-light d-flex align-items-center justify-content-center"
-          style="height: 300px"
-        >
-          <i class="bi bi-image text-muted" style="font-size: 4rem"></i>
+        <div class="card mb-4">
+          <div class="card-body">
+            <h5 class="card-title mb-3">Crop Image</h5>
+            <img
+              src="{{ crop.image_url }}"
+              class="img-fluid rounded crop-detail-image"
+              alt="{{ crop.name }}"
+              style="max-height: 400px; cursor: pointer;"
+              onclick="openImagePreview(this.src)"
+              onerror="this.onerror=null; this.src='{{ url_for('static', filename='images/default-crop.jpg') }}'; this.style.opacity=0.7;"
+            />
+          </div>
         </div>
         {% endif %}
         <div class="card-body">
@@ -160,7 +159,13 @@ endblock %} {% block content %}
         ></button>
       </div>
       <div class="modal-body text-center">
-        <img id="previewImage" src="" class="img-fluid" alt="{{ crop.name }}" />
+        <img
+          id="previewImage"
+          src=""
+          class="img-fluid"
+          alt="{{ crop.name }}"
+          onerror="this.onerror=null; this.src='{{ url_for('static', filename='images/default-crop.jpg') }}'; this.style.opacity=0.7;"
+        />
       </div>
     </div>
   </div>
@@ -180,10 +185,13 @@ endblock %} {% block content %}
     margin-bottom: 0;
   }
   .crop-detail-image {
-    transition: opacity 0.3s;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
   }
   .crop-detail-image:hover {
     opacity: 0.9;
+    transform: scale(1.01);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
   }
 </style>
 {% endblock %} {% block scripts %}
@@ -192,7 +200,17 @@ endblock %} {% block content %}
     const modal = new bootstrap.Modal(
       document.getElementById("imagePreviewModal")
     );
-    document.getElementById("previewImage").src = src;
+    const previewImg = document.getElementById("previewImage");
+    
+    // Show loading state
+    previewImg.style.opacity = 0.5;
+    
+    // Load new image
+    previewImg.onload = function() {
+      previewImg.style.opacity = 1;
+    };
+    previewImg.src = src;
+    
     modal.show();
   }
 

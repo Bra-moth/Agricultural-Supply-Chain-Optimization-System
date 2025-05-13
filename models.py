@@ -53,7 +53,7 @@ class Crop(db.Model):
     def image_url(self):
         if self.image:
             return url_for('static', filename=f'uploads/{self.image}')
-        return None
+        return url_for('static', filename='images/default-crop.jpg')
 
 class Inventory(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -110,6 +110,7 @@ class Order(db.Model):
     farmer_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     retailer_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     distributor_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)  # Can be null initially
+    parent_order_id = db.Column(db.Integer, db.ForeignKey('orders.id'), nullable=True)  # For linking farmer orders to main order
     status = db.Column(db.String(20), default='pending')  # pending, processing, completed, cancelled
     total_amount = db.Column(db.Float, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -121,6 +122,7 @@ class Order(db.Model):
     retailer = db.relationship('User', foreign_keys=[retailer_id], backref=db.backref('orders_as_retailer', lazy=True))
     distributor = db.relationship('User', foreign_keys=[distributor_id], backref=db.backref('orders_as_distributor', lazy=True))
     items = db.relationship('OrderItem', backref='order', lazy=True, cascade='all, delete-orphan')
+    parent_order = db.relationship('Order', remote_side=[id], backref=db.backref('child_orders', lazy=True))
 
     @property
     def status_color(self):

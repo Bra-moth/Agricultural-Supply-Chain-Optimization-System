@@ -14,27 +14,27 @@ endblock %} {% block content %}
     <div class="col-md-3">
       <div class="card bg-primary text-white h-100">
         <div class="card-body">
-          <h5 class="card-title">Pending Orders</h5>
-          <h2 class="card-text">{{ pending_orders|default(0) }}</h2>
-          <p class="mb-0">Awaiting delivery</p>
+          <h5 class="card-title">Active Orders</h5>
+          <h2 class="card-text">{{ active_orders|length }}</h2>
+          <p class="mb-0">Currently processing</p>
         </div>
       </div>
     </div>
     <div class="col-md-3">
       <div class="card bg-success text-white h-100">
         <div class="card-body">
-          <h5 class="card-title">Total Products</h5>
-          <h2 class="card-text">{{ total_products|default(0) }}</h2>
-          <p class="mb-0">In inventory</p>
+          <h5 class="card-title">Monthly Revenue</h5>
+          <h2 class="card-text">R{{ total_revenue|round(2) }}</h2>
+          <p class="mb-0">This month</p>
         </div>
       </div>
     </div>
     <div class="col-md-3">
       <div class="card bg-info text-white h-100">
         <div class="card-body">
-          <h5 class="card-title">Connected Suppliers</h5>
-          <h2 class="card-text">{{ supplier_count|default(0) }}</h2>
-          <p class="mb-0">Active partnerships</p>
+          <h5 class="card-title">YoY Growth</h5>
+          <h2 class="card-text">{{ yoy_growth|round(1) }}%</h2>
+          <p class="mb-0">Year over Year</p>
         </div>
       </div>
     </div>
@@ -42,7 +42,7 @@ endblock %} {% block content %}
       <div class="card bg-warning text-white h-100">
         <div class="card-body">
           <h5 class="card-title">Low Stock Items</h5>
-          <h2 class="card-text">{{ low_stock_count|default(0) }}</h2>
+          <h2 class="card-text">{{ low_stock_products|length }}</h2>
           <p class="mb-0">Need reordering</p>
         </div>
       </div>
@@ -161,7 +161,7 @@ endblock %} {% block content %}
               <div class="d-flex w-100 justify-content-between">
                 <h6 class="mb-1">Order #{{ order.id }}</h6>
                 <small class="text-muted"
-                  >{{ order.order_date.strftime('%Y-%m-%d') }}</small
+                  >{{ order.created_at.strftime('%Y-%m-%d') }}</small
                 >
               </div>
               <p class="mb-1">{{ order.total_items }} items</p>
@@ -182,21 +182,84 @@ endblock %} {% block content %}
   </div>
 
   <!-- Analytics Section -->
-  <div class="row">
-    <div class="col-md-6 mb-4">
-      <div class="card">
-        <div class="card-header">
-          <h5 class="mb-0">Sales Analytics</h5>
+  <div class="row g-4">
+    <!-- Sales and Profit Trends -->
+    <div class="col-md-8 mb-4">
+      <div class="card h-100">
+        <div
+          class="card-header d-flex justify-content-between align-items-center"
+        >
+          <h5 class="mb-0">Sales & Profit Trends</h5>
+          <div class="btn-group">
+            <button
+              class="btn btn-sm btn-outline-secondary active"
+              onclick="toggleChartView('sales')"
+            >
+              Sales
+            </button>
+            <button
+              class="btn btn-sm btn-outline-secondary"
+              onclick="toggleChartView('profit')"
+            >
+              Profit
+            </button>
+          </div>
         </div>
         <div class="card-body">
           <canvas id="salesChart" height="300"></canvas>
         </div>
       </div>
     </div>
+
+    <!-- Category Performance -->
+    <div class="col-md-4 mb-4">
+      <div class="card h-100 shadow-sm">
+        <div class="card-header bg-light">
+          <h5 class="mb-0">Category Performance</h5>
+          <small class="text-muted">Revenue distribution by category</small>
+        </div>
+        <div class="card-body">
+          <canvas id="categoryChart" height="300"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Popular Products -->
     <div class="col-md-6 mb-4">
-      <div class="card">
+      <div class="card h-100">
         <div class="card-header">
-          <h5 class="mb-0">Popular Products</h5>
+          <h5 class="mb-0">Top Selling Products</h5>
+        </div>
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Product</th>
+                  <th>Quantity Sold</th>
+                  <th>Revenue</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for i in range(product_labels|length) %}
+                <tr>
+                  <td>{{ product_labels[i] }}</td>
+                  <td>{{ product_quantities[i]|round(0) }}</td>
+                  <td>R{{ product_revenues[i]|round(2) }}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Product Performance -->
+    <div class="col-md-6 mb-4">
+      <div class="card h-100">
+        <div class="card-header">
+          <h5 class="mb-0">Product Performance</h5>
         </div>
         <div class="card-body">
           <canvas id="productsChart" height="300"></canvas>
@@ -276,18 +339,25 @@ endblock %} {% block content %}
 
   // Initialize charts
   document.addEventListener("DOMContentLoaded", function () {
-    // Sales Chart
+    // Sales & Profit Chart
     const salesCtx = document.getElementById("salesChart").getContext("2d");
-    new Chart(salesCtx, {
+    const salesChart = new Chart(salesCtx, {
       type: "line",
       data: {
         labels: {{ sales_labels|tojson }},
         datasets: [{
-          label: 'Monthly Sales (R)',
+          label: "Sales (R)",
           data: {{ sales_data|tojson }},
-          borderColor: 'rgb(75, 192, 192)',
-          tension: 0.1,
-          fill: false
+          borderColor: "rgb(75, 192, 192)",
+          backgroundColor: "rgba(75, 192, 192, 0.1)",
+          fill: true
+        }, {
+          label: "Profit (R)",
+          data: {{ profit_data|tojson }},
+          borderColor: "rgb(255, 159, 64)",
+          backgroundColor: "rgba(255, 159, 64, 0.1)",
+          fill: true,
+          hidden: true
         }]
       },
       options: {
@@ -298,7 +368,7 @@ endblock %} {% block content %}
             beginAtZero: true,
             ticks: {
               callback: function(value) {
-                return 'R' + value.toFixed(2);
+                return "R" + value.toFixed(2);
               }
             }
           }
@@ -307,7 +377,7 @@ endblock %} {% block content %}
           tooltip: {
             callbacks: {
               label: function(context) {
-                return 'Sales: R' + context.parsed.y.toFixed(2);
+                return context.dataset.label + ": R" + context.parsed.y.toFixed(2);
               }
             }
           }
@@ -315,22 +385,22 @@ endblock %} {% block content %}
       }
     });
 
-    // Products Chart
-    const productsCtx = document
-      .getElementById("productsChart")
-      .getContext("2d");
-    new Chart(productsCtx, {
+    // Category Performance Chart
+    const categoryCtx = document.getElementById("categoryChart").getContext("2d");
+    new Chart(categoryCtx, {
       type: "doughnut",
       data: {
-        labels: {{ product_labels|tojson }},
+        labels: {{ category_labels|tojson }},
         datasets: [{
-          data: {{ product_quantities|tojson }},
+          data: {{ category_revenues|tojson }},
           backgroundColor: [
-            'rgb(75, 192, 192)',
-            'rgb(255, 159, 64)',
-            'rgb(255, 205, 86)',
-            'rgb(201, 203, 207)',
-            'rgb(54, 162, 235)'
+            "rgb(75, 192, 192)",
+            "rgb(255, 159, 64)",
+            "rgb(255, 205, 86)",
+            "rgb(201, 203, 207)",
+            "rgb(54, 162, 235)",
+            "rgb(153, 102, 255)",
+            "rgb(255, 99, 132)"
           ]
         }]
       },
@@ -339,14 +409,67 @@ endblock %} {% block content %}
         maintainAspectRatio: false,
         plugins: {
           legend: {
-            position: 'right'
+            position: "right",
+            labels: {
+              font: {
+                size: 12
+              }
+            }
+          },
+          title: {
+            display: true,
+            text: "Revenue by Category",
+            font: {
+              size: 14
+            }
           },
           tooltip: {
             callbacks: {
               label: function(context) {
-                return context.label + ': ' +
-                       context.parsed + ' units (' +
-                       Math.round(context.parsed * 100 / context.dataset.data.reduce((a, b) => a + b, 0)) + '%)';
+                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                const percentage = ((context.parsed / total) * 100).toFixed(1);
+                const value = context.parsed.toFixed(2);
+                return `${context.label}: R${value} (${percentage}%)`;
+              }
+            }
+          }
+        },
+        cutout: "60%"
+      }
+    });
+
+    // Product Performance Chart
+    const productsCtx = document.getElementById("productsChart").getContext("2d");
+    new Chart(productsCtx, {
+      type: "bar",
+      data: {
+        labels: {{ product_labels|tojson }},
+        datasets: [{
+          label: "Revenue (R)",
+          data: {{ product_revenues|tojson }},
+          backgroundColor: "rgba(75, 192, 192, 0.8)",
+          borderColor: "rgb(75, 192, 192)",
+          borderWidth: 1
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: {
+              callback: function(value) {
+                return "R" + value.toFixed(2);
+              }
+            }
+          }
+        },
+        plugins: {
+          tooltip: {
+            callbacks: {
+              label: function(context) {
+                return "Revenue: R" + context.parsed.y.toFixed(2);
               }
             }
           }
@@ -354,5 +477,27 @@ endblock %} {% block content %}
       }
     });
   });
+
+  function toggleChartView(view) {
+    const chart = Chart.getChart("salesChart");
+    if (view === "sales") {
+      chart.data.datasets[0].hidden = false;
+      chart.data.datasets[1].hidden = true;
+    } else {
+      chart.data.datasets[0].hidden = true;
+      chart.data.datasets[1].hidden = false;
+    }
+    chart.update();
+
+    // Update button states
+    const buttons = document.querySelectorAll(".btn-group .btn");
+    buttons.forEach(button => {
+      button.classList.remove("active");
+      if ((view === "sales" && button.textContent === "Sales") ||
+          (view === "profit" && button.textContent === "Profit")) {
+        button.classList.add("active");
+      }
+    });
+  }
 </script>
 {% endblock %}

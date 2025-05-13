@@ -5,6 +5,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from wtforms import StringField, SelectField, FloatField, TextAreaField, FileField, PasswordField, BooleanField, SubmitField
 from wtforms.validators import DataRequired, Optional, Length, Email, ValidationError, EqualTo
 from flask_wtf import FlaskForm
+from flask import url_for
 
 class User(db.Model, UserMixin):
     __tablename__ = 'users'
@@ -33,25 +34,25 @@ class Crop(db.Model):
     farmer_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     name = db.Column(db.String(100), nullable=False)
     variety = db.Column(db.String(100))
-    quantity = db.Column(db.Float, nullable=False, default=0)
-    unit = db.Column(db.String(20), nullable=False, default='kg')
-    planting_date = db.Column(db.DateTime, nullable=False)
-    expected_harvest_date = db.Column(db.DateTime, nullable=False)
-    harvest_date = db.Column(db.DateTime)
-    status = db.Column(db.String(50), default='growing')  # growing, ready_for_harvest, harvested
-    image = db.Column(db.String(255))  # Store the filename of the uploaded image
-    price_per_unit = db.Column(db.Float, default=0)  # Price in Rands
+    quantity = db.Column(db.Float, nullable=False)
+    unit = db.Column(db.String(20), nullable=False)
+    price_per_unit = db.Column(db.Float, nullable=False)
     description = db.Column(db.Text)
+    image = db.Column(db.String(255))
+    status = db.Column(db.String(20), nullable=False, default='growing')  # Options: growing, ready_for_harvest, harvested
+    expected_harvest_date = db.Column(db.DateTime, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    planting_date = db.Column(db.DateTime, nullable=False)
+    harvest_date = db.Column(db.DateTime)
     planting_season = db.Column(db.String(50))  # Store the planting season
     harvest_period = db.Column(db.Integer)  # Store the harvest period in days
     yield_per_acre = db.Column(db.Float)  # Store the expected yield per acre
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     @property
     def image_url(self):
         if self.image:
-            return f'/static/uploads/{self.image}'
+            return url_for('static', filename=f'uploads/{self.image}')
         return None
 
 class Inventory(db.Model):

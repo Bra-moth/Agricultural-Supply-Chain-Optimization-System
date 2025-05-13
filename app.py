@@ -31,9 +31,13 @@ app.config['SECRET_KEY'] = 'your-secret-key-here'  # Change this in production!
 app.config['WTF_CSRF_ENABLED'] = True
 
 # File upload configuration
-app.config['UPLOAD_FOLDER'] = os.path.join(app.static_folder, 'uploads')
-if not os.path.exists(app.config['UPLOAD_FOLDER']):
-    os.makedirs(app.config['UPLOAD_FOLDER'])
+UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'uploads')
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+app.config['MAX_CONTENT_LENGTH'] = 5 * 1024 * 1024  # 5MB max file size
+
+# Ensure upload directory exists
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 # Initialize extensions
 csrf = CSRFProtect(app)
@@ -300,13 +304,16 @@ def retailer_dashboard():
         Order.status.in_(['pending', 'processing'])
     ).all()
 
-    # Calculate total purchases for this month
+    # Calculate total purchases and revenue for this month
     start_of_month = datetime.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     total_purchases = db.session.query(func.sum(Order.total_amount)).filter(
         Order.retailer_id == current_user.id,
         Order.status == 'completed',
         Order.completed_at >= start_of_month
     ).scalar() or 0.0
+
+    # Calculate total revenue (assuming a 20% markup)
+    total_revenue = total_purchases * 1.2
 
     # Get available products
     products = Product.query.filter(
@@ -326,25 +333,30 @@ def retailer_dashboard():
     # Get sales data for the last 6 months
     sales_data = []
     sales_labels = []
+    profit_data = []
     for i in range(5, -1, -1):
         date = datetime.now() - timedelta(days=i*30)
         month_start = date.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
         month_end = (month_start + timedelta(days=32)).replace(day=1) - timedelta(seconds=1)
         
-        # Calculate total sales for the month
+        # Calculate total sales and profit for the month
         monthly_sales = db.session.query(func.sum(Order.total_amount)).filter(
             Order.retailer_id == current_user.id,
             Order.status == 'completed',
             Order.completed_at.between(month_start, month_end)
         ).scalar() or 0.0
         
+        monthly_profit = monthly_sales * 0.2  # Assuming 20% profit margin
+        
         sales_data.append(monthly_sales)
+        profit_data.append(monthly_profit)
         sales_labels.append(date.strftime('%b %Y'))
 
     # Get popular products data
     popular_products = db.session.query(
         OrderItem.product_id,
-        func.sum(OrderItem.quantity).label('total_quantity')
+        func.sum(OrderItem.quantity).label('total_quantity'),
+        func.sum(OrderItem.quantity * OrderItem.price_per_unit).label('total_revenue')
     ).join(Order).filter(
         Order.retailer_id == current_user.id,
         Order.status == 'completed'
@@ -357,29 +369,79 @@ def retailer_dashboard():
     # Get product names and prepare chart data
     product_labels = []
     product_quantities = []
-    for prod_id, quantity in popular_products:
+    product_revenues = []
+    for prod_id, quantity, revenue in popular_products:
         product = Product.query.get(prod_id)
         if product:
             product_labels.append(product.name)
             product_quantities.append(float(quantity))
+            product_revenues.append(float(revenue))
 
-    # Get unique categories and suppliers for filters
-    categories = db.session.query(Product.category).distinct().all()
-    suppliers = User.query.filter_by(role='distributor').all()
+    # Calculate year-over-year growth
+    last_year_start = datetime.now() - timedelta(days=365)
+    last_year_sales = db.session.query(func.sum(Order.total_amount)).filter(
+        Order.retailer_id == current_user.id,
+        Order.status == 'completed',
+        Order.completed_at >= last_year_start
+    ).scalar() or 0.0
+
+    previous_year_sales = db.session.query(func.sum(Order.total_amount)).filter(
+        Order.retailer_id == current_user.id,
+        Order.status == 'completed',
+        Order.completed_at.between(
+            last_year_start - timedelta(days=365),
+            last_year_start
+        )
+    ).scalar() or 0.0
+
+    yoy_growth = ((last_year_sales - previous_year_sales) / previous_year_sales * 100) if previous_year_sales > 0 else 0
+
+    # Get category performance
+    category_performance = db.session.query(
+        Product.category,
+        func.sum(OrderItem.quantity * OrderItem.price_per_unit).label('total_revenue')
+    ).join(
+        OrderItem, Product.id == OrderItem.product_id
+    ).join(
+        Order, OrderItem.order_id == Order.id
+    ).filter(
+        Order.retailer_id == current_user.id,
+        Order.status == 'completed',
+        Product.category.isnot(None)  # Exclude products without categories
+    ).group_by(
+        Product.category
+    ).order_by(
+        func.sum(OrderItem.quantity * OrderItem.price_per_unit).desc()
+    ).all()
+
+    category_labels = []
+    category_revenues = []
+    for category, revenue in category_performance:
+        category_labels.append(category)
+        category_revenues.append(float(revenue))
+
+    # If no categories found, add a default one
+    if not category_labels:
+        category_labels = ['No Data']
+        category_revenues = [0.0]
 
     return render_template('retailer_dashboard.html',
         user=current_user,
         active_orders=active_orders,
         total_purchases=total_purchases,
+        total_revenue=total_revenue,
         products=products,
         low_stock_products=low_stock_products,
         recent_orders=recent_orders,
-        categories=[c[0] for c in categories],
-        suppliers=suppliers,
         sales_labels=sales_labels,
         sales_data=sales_data,
+        profit_data=profit_data,
         product_labels=product_labels,
-        product_quantities=product_quantities
+        product_quantities=product_quantities,
+        product_revenues=product_revenues,
+        yoy_growth=yoy_growth,
+        category_labels=category_labels,
+        category_revenues=category_revenues
     )
 
 @app.route('/crop-inventory')
@@ -389,62 +451,104 @@ def crop_inventory():
     crops = Crop.query.filter_by(farmer_id=current_user.id).all()
     return render_template('crop_inventory.html', crops=crops)
 
-@app.route('/farmer/add-crop', methods=['GET', 'POST'])
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+def save_crop_image(form_image):
+    if form_image and form_image.filename and allowed_file(form_image.filename):
+        filename = secure_filename(form_image.filename)
+        # Add timestamp to filename to prevent duplicates
+        base, ext = os.path.splitext(filename)
+        filename = f"{base}_{int(time.time())}{ext}"
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        form_image.save(filepath)
+        return filename
+    return None
+
+@app.route('/add_crop', methods=['GET', 'POST'])
 @login_required
-@role_required('farmer')
 def add_crop():
+    if current_user.role != 'farmer':
+        flash('Access denied. Only farmers can add crops.', 'danger')
+        return redirect(url_for('home'))
+
     form = CropForm()
-    
     if form.validate_on_submit():
         try:
             # Handle image upload
-            image_filename = None
-            if form.image.data:
-                image = form.image.data
-                # Create a secure filename with timestamp to avoid duplicates
-                filename = secure_filename(image.filename)
-                image_filename = f"{current_user.id}_{int(time.time())}_{filename}"
-                # Ensure the upload folder exists
-                if not os.path.exists(app.config['UPLOAD_FOLDER']):
-                    os.makedirs(app.config['UPLOAD_FOLDER'])
-                # Save the image
-                image_path = os.path.join(app.config['UPLOAD_FOLDER'], image_filename)
-                image.save(image_path)
-
-            # Calculate expected harvest date
-            planting_date = datetime.now()
-            expected_harvest_date = planting_date + timedelta(days=form.harvest_period.data)
-
-            # Create new crop
-            new_crop = Crop(
+            image_filename = save_crop_image(form.image.data)
+            
+            crop = Crop(
+                farmer_id=current_user.id,
                 name=form.name.data,
                 variety=form.variety.data,
-                planting_season=form.planting_season.data,
-                harvest_period=form.harvest_period.data,
-                yield_per_acre=form.yield_per_acre.data,
+                quantity=form.quantity.data,
+                unit=form.unit.data,
+                planting_date=form.planting_date.data,
+                expected_harvest_date=form.expected_harvest_date.data,
                 price_per_unit=form.price_per_unit.data,
                 description=form.description.data,
-                image=image_filename,
-                farmer_id=current_user.id,
-                status='growing',
-                planting_date=planting_date,
-                expected_harvest_date=expected_harvest_date,
-                quantity=form.yield_per_acre.data,  # Initial quantity is the expected yield
-                unit='kg'  # Default unit is kg
+                image=image_filename
             )
             
-            db.session.add(new_crop)
+            db.session.add(crop)
             db.session.commit()
-            
             flash('Crop added successfully!', 'success')
             return redirect(url_for('crop_inventory'))
             
         except Exception as e:
             db.session.rollback()
-            flash('An error occurred while adding the crop. Please try again.', 'danger')
-            app.logger.error(f"Error adding crop: {str(e)}")
-    
+            flash(f'Error adding crop: {str(e)}', 'danger')
+            
     return render_template('add_crop.html', form=form)
+
+@app.route('/edit_crop/<int:crop_id>', methods=['GET', 'POST'])
+@login_required
+def edit_crop(crop_id):
+    crop = Crop.query.get_or_404(crop_id)
+    
+    # Verify ownership
+    if crop.farmer_id != current_user.id:
+        flash('You can only edit your own crops.', 'danger')
+        return redirect(url_for('crop_inventory'))
+        
+    form = CropForm(obj=crop)
+    
+    if form.validate_on_submit():
+        try:
+            # Handle image upload
+            if form.image.data:
+                # Delete old image if it exists
+                if crop.image:
+                    old_image_path = os.path.join(app.config['UPLOAD_FOLDER'], crop.image)
+                    if os.path.exists(old_image_path):
+                        os.remove(old_image_path)
+                
+                # Save new image
+                image_filename = save_crop_image(form.image.data)
+                crop.image = image_filename
+            
+            # Update other fields
+            form.populate_obj(crop)
+            
+            db.session.commit()
+            flash('Crop updated successfully!', 'success')
+            return redirect(url_for('crop_detail', crop_id=crop.id))
+            
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error updating crop: {str(e)}', 'danger')
+    
+    return render_template('edit_crop.html', form=form, crop=crop)
+
+# Add image_url property to Crop model
+@property
+def image_url(self):
+    if self.image:
+        return url_for('static', filename=f'uploads/{self.image}')
+    return url_for('static', filename='images/default-crop.png')  # Provide a default image
+
+Crop.image_url = image_url
 
 @app.route('/orders')
 @login_required
@@ -687,297 +791,6 @@ def crop_detail(crop_id):
                          crop=crop,
                          market_price=market_price)
 
-@app.route('/farmer/edit-crop/<int:crop_id>', methods=['GET', 'POST'])
-@login_required
-@role_required('farmer')
-def edit_crop(crop_id):
-    # Get the crop
-    crop = Crop.query.get_or_404(crop_id)
-    
-    # Ensure the farmer owns this crop
-    if crop.farmer_id != current_user.id:
-        flash('You do not have permission to edit this crop.', 'danger')
-        return redirect(url_for('crop_inventory'))
-    
-    # Create form and populate with crop data
-    form = CropForm(obj=crop)
-    
-    if form.validate_on_submit():
-        try:
-            # Update crop data from form
-            form.populate_obj(crop)
-            
-            # Handle image upload if new image is provided
-            if form.image.data:
-                # Delete old image if it exists
-                if crop.image_path and os.path.exists(os.path.join(app.config['UPLOAD_FOLDER'], crop.image_path)):
-                    os.remove(os.path.join(app.config['UPLOAD_FOLDER'], crop.image_path))
-                
-                # Save new image
-                image = form.image.data
-                filename = secure_filename(image.filename)
-                timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-                unique_filename = f"{timestamp}_{filename}"
-                image.save(os.path.join(app.config['UPLOAD_FOLDER'], unique_filename))
-                crop.image_path = unique_filename
-            
-            # Update the database
-            db.session.commit()
-            
-            flash('Crop updated successfully!', 'success')
-            return redirect(url_for('crop_detail', crop_id=crop.id))
-            
-        except Exception as e:
-            db.session.rollback()
-            app.logger.error(f'Error updating crop: {str(e)}')
-            flash('An error occurred while updating the crop. Please try again.', 'danger')
-    
-    return render_template('edit_crop.html', form=form, crop=crop)
-
-@app.route('/api/orders/<int:order_id>/status', methods=['PUT'])
-@login_required
-@role_required('distributor')
-def update_order_status(order_id):
-    try:
-        order = Order.query.get_or_404(order_id)
-        
-        if order.distributor_id != current_user.id:
-            return jsonify({'success': False, 'message': 'Access denied'}), 403
-        
-        data = request.get_json()
-        new_status = data.get('status')
-        
-        if new_status not in ['pending', 'processing', 'completed', 'cancelled']:
-            return jsonify({'success': False, 'message': 'Invalid status'}), 400
-        
-        order.status = new_status
-        if new_status == 'completed':
-            order.completed_at = datetime.now()
-        
-        db.session.commit()
-        return jsonify({'success': True})
-        
-    except Exception as e:
-        db.session.rollback()
-        app.logger.error(f"Error updating order status: {str(e)}")
-        return jsonify({'success': False, 'message': 'Server error'}), 500
-
-@app.route('/api/deliveries/<int:delivery_id>/status', methods=['PUT'])
-@login_required
-@role_required('distributor')
-def update_delivery_status(delivery_id):
-    try:
-        delivery = Delivery.query.get_or_404(delivery_id)
-        
-        if delivery.distributor_id != current_user.id:
-            return jsonify({'success': False, 'message': 'Access denied'}), 403
-        
-        data = request.get_json()
-        new_status = data.get('status')
-        
-        if new_status not in ['scheduled', 'in_transit', 'completed', 'failed']:
-            return jsonify({'success': False, 'message': 'Invalid status'}), 400
-        
-        delivery.status = new_status
-        if new_status == 'completed':
-            delivery.completed_at = datetime.now()
-            # Update associated order status
-            if delivery.order:
-                delivery.order.status = 'completed'
-                delivery.order.completed_at = datetime.now()
-        
-        db.session.commit()
-        return jsonify({'success': True})
-        
-    except Exception as e:
-        db.session.rollback()
-        app.logger.error(f"Error updating delivery status: {str(e)}")
-        return jsonify({'success': False, 'message': 'Server error'}), 500
-
-@app.route('/api/market-insights/<period>')
-@login_required
-@role_required('retailer')
-def get_market_insights(period):
-    try:
-        today = datetime.now()
-        if period == 'weekly':
-            start_date = today - timedelta(days=7)
-            labels = [(start_date + timedelta(days=i)).strftime('%a') for i in range(8)]
-        elif period == 'monthly':
-            start_date = today - timedelta(days=30)
-            labels = [(start_date + timedelta(days=i)).strftime('%d %b') for i in range(31)]
-        elif period == 'yearly':
-            start_date = today - timedelta(days=365)
-            labels = [(start_date + timedelta(days=i*30)).strftime('%b') for i in range(12)]
-        else:
-            return jsonify({'error': 'Invalid period'}), 400
-
-        # Get average prices for the period
-        # This is a placeholder - you should implement actual price tracking
-        prices = [random.uniform(10, 100) for _ in labels]
-
-        return jsonify({
-            'labels': labels,
-            'prices': prices
-        })
-
-    except Exception as e:
-        app.logger.error(f"Error getting market insights: {str(e)}")
-        return jsonify({'error': 'Server error'}), 500
-
-@app.route('/api/cart/add', methods=['POST'])
-@login_required
-@role_required('retailer')
-def add_to_cart():
-    try:
-        data = request.get_json()
-        product_id = data.get('product_id')
-        quantity = data.get('quantity', 1)
-
-        if not product_id:
-            return jsonify({'success': False, 'message': 'Product ID is required'}), 400
-
-        product = Product.query.get_or_404(product_id)
-
-        if product.quantity < quantity:
-            return jsonify({
-                'success': False,
-                'message': f'Only {product.quantity} units available'
-            }), 400
-
-        # Get or create cart
-        cart = Cart.query.filter_by(retailer_id=current_user.id, status='active').first()
-        if not cart:
-            cart = Cart(retailer_id=current_user.id, status='active')
-            db.session.add(cart)
-
-        # Add item to cart
-        cart_item = CartItem.query.filter_by(cart_id=cart.id, product_id=product_id).first()
-        if cart_item:
-            cart_item.quantity += quantity
-        else:
-            cart_item = CartItem(
-                cart_id=cart.id,
-                product_id=product_id,
-                quantity=quantity,
-                price_per_unit=product.price_per_unit
-            )
-            db.session.add(cart_item)
-
-        db.session.commit()
-
-        # Get updated cart count
-        cart_count = CartItem.query.filter_by(cart_id=cart.id).count()
-
-        return jsonify({
-            'success': True,
-            'cart_count': cart_count
-        })
-
-    except Exception as e:
-        db.session.rollback()
-        app.logger.error(f"Error adding to cart: {str(e)}")
-        return jsonify({'success': False, 'message': 'Server error'}), 500
-
-@app.route('/api/orders/<int:order_id>/cancel', methods=['POST'])
-@login_required
-def cancel_order(order_id):
-    try:
-        order = Order.query.get_or_404(order_id)
-        
-        # Only retailer who placed the order can cancel it
-        if order.retailer_id != current_user.id:
-            return jsonify({'success': False, 'message': 'Access denied'}), 403
-        
-        # Can only cancel pending orders
-        if order.status != 'pending':
-            return jsonify({'success': False, 'message': 'Only pending orders can be cancelled'}), 400
-        
-        order.status = 'cancelled'
-        db.session.commit()
-        
-        return jsonify({'success': True})
-        
-    except Exception as e:
-        db.session.rollback()
-        app.logger.error(f"Error cancelling order: {str(e)}")
-        return jsonify({'success': False, 'message': 'Server error'}), 500
-
-@app.route('/retailer/place-order/<int:crop_id>', methods=['GET', 'POST'])
-@login_required
-@role_required('retailer')
-def place_order(crop_id):
-    # Get the crop
-    crop = Crop.query.get_or_404(crop_id)
-    
-    # Only allow ordering crops that are ready for harvest
-    if crop.status != 'ready_for_harvest':
-        flash('This crop is not available for purchase.', 'danger')
-        return redirect(url_for('crop_detail', crop_id=crop.id))
-    
-    form = PlaceOrderForm()
-    
-    if form.validate_on_submit():
-        try:
-            # Check if quantity is available
-            if form.quantity.data > crop.quantity:
-                flash(f'Only {crop.quantity} {crop.unit} available.', 'danger')
-                return render_template('place_order.html', form=form, crop=crop)
-            
-            # Calculate total amount
-            total_amount = form.quantity.data * crop.price_per_unit
-            
-            # Create new order
-            new_order = Order(
-                farmer_id=crop.farmer_id,
-                retailer_id=current_user.id,
-                distributor_id=None,  # This will be set when a distributor accepts the order
-                status='pending',
-                total_amount=total_amount,
-                notes=form.notes.data,
-                created_at=datetime.now()
-            )
-            db.session.add(new_order)
-            db.session.flush()  # This gets us the order ID
-            
-            # Create order item
-            order_item = OrderItem(
-                order_id=new_order.id,
-                crop_id=crop.id,
-                quantity=form.quantity.data,
-                price_per_unit=crop.price_per_unit
-            )
-            db.session.add(order_item)
-            
-            # Create delivery record
-            delivery = Delivery(
-                order_id=new_order.id,
-                distributor_id=None,  # Will be set when a distributor accepts the order
-                status='scheduled',
-                scheduled_date=datetime.now() + timedelta(days=3),  # Default delivery in 3 days
-                delivery_address=form.delivery_address.data,
-                tracking_number=f'TRK{new_order.id}{int(time.time())}'[-12:],  # Generate a unique tracking number
-                notes=form.notes.data
-            )
-            db.session.add(delivery)
-            
-            # Update crop quantity
-            crop.quantity -= form.quantity.data
-            if crop.quantity <= 0:
-                crop.status = 'sold_out'
-            
-            db.session.commit()
-            
-            flash('Order placed successfully!', 'success')
-            return redirect(url_for('order_detail', order_id=new_order.id))
-            
-        except Exception as e:
-            db.session.rollback()
-            app.logger.error(f"Error placing order: {str(e)}")
-            flash('An error occurred while placing the order. Please try again.', 'danger')
-    
-    return render_template('place_order.html', form=form, crop=crop)
-
 @app.route('/order-history')
 @login_required
 def order_history():
@@ -1206,7 +1019,7 @@ def dashboard():
         flash('Invalid user role.', 'danger')
         return redirect(url_for('home'))
 
-@app.route('/available-crops')
+@app.route('/available_crops')
 @login_required
 def available_crops():
     # For distributors and retailers, show all ready-for-harvest crops
@@ -1216,6 +1029,84 @@ def available_crops():
     else:
         flash('Access denied. This page is only for distributors and retailers.', 'danger')
         return redirect(url_for('dashboard'))
+
+@app.route('/place_order/<int:crop_id>', methods=['GET', 'POST'])
+@login_required
+@role_required('retailer')
+def place_order(crop_id):
+    crop = Crop.query.get_or_404(crop_id)
+    
+    # Ensure crop is ready for harvest
+    if crop.status != 'ready_for_harvest':
+        flash('This crop is not available for ordering.', 'danger')
+        return redirect(url_for('available_crops'))
+    
+    form = PlaceOrderForm()
+    
+    if form.validate_on_submit():
+        try:
+            # Validate quantity is available
+            if form.quantity.data > crop.quantity:
+                flash(f'Only {crop.quantity} {crop.unit} available.', 'danger')
+                return render_template('place_order.html', form=form, crop=crop)
+            
+            # Create new order
+            order = Order(
+                farmer_id=crop.farmer_id,
+                retailer_id=current_user.id,
+                status='pending',
+                total_amount=form.quantity.data * crop.price_per_unit,
+                notes=form.notes.data
+            )
+            db.session.add(order)
+            db.session.flush()  # Get the order ID
+            
+            # Create order item
+            order_item = OrderItem(
+                order_id=order.id,
+                crop_id=crop.id,
+                quantity=form.quantity.data,
+                price_per_unit=crop.price_per_unit
+            )
+            db.session.add(order_item)
+            
+            # Update crop quantity
+            crop.quantity -= form.quantity.data
+            
+            db.session.commit()
+            flash('Order placed successfully!', 'success')
+            return redirect(url_for('orders'))
+            
+        except Exception as e:
+            db.session.rollback()
+            app.logger.error(f'Error placing order: {str(e)}')
+            flash('An error occurred while placing the order. Please try again.', 'danger')
+    
+    return render_template('place_order.html', form=form, crop=crop)
+
+@app.route('/api/mark_ready_for_harvest/<int:crop_id>', methods=['POST'])
+@login_required
+def mark_ready_for_harvest(crop_id):
+    if current_user.role != 'farmer':
+        return jsonify({'success': False, 'error': 'Only farmers can mark crops as ready for harvest'}), 403
+    
+    crop = Crop.query.get_or_404(crop_id)
+    
+    # Check if the crop belongs to the current farmer
+    if crop.farmer_id != current_user.id:
+        return jsonify({'success': False, 'error': 'You can only mark your own crops as ready for harvest'}), 403
+    
+    # Check if the crop is in the correct state
+    if crop.status != 'growing':
+        return jsonify({'success': False, 'error': 'This crop cannot be marked as ready for harvest'}), 400
+    
+    try:
+        crop.status = 'ready_for_harvest'
+        db.session.commit()
+        return jsonify({'success': True})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 if __name__ == '__main__':
     app.run(debug=True)

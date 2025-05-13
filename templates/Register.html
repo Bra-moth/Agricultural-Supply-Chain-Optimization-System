@@ -96,8 +96,8 @@
                           id="role" name="role" required>
                     <option value="">Select your role</option>
                     <option value="farmer" {% if form.role.data == 'farmer' %}selected{% endif %}>Farmer</option>
-                    <option value="buyer" {% if form.role.data == 'buyer' %}selected{% endif %}>Buyer</option>
-                    <option value="logistics" {% if form.role.data == 'logistics' %}selected{% endif %}>Logistics Provider</option>
+                    <option value="distributor" {% if form.role.data == 'distributor' %}selected{% endif %}>Distributor</option>
+                    <option value="retailer" {% if form.role.data == 'retailer' %}selected{% endif %}>Retailer</option>
                   </select>
                   <label for="role"><i class="fas fa-user-tag me-2"></i>Account Type</label>
                   {% for error in form.role.errors %}

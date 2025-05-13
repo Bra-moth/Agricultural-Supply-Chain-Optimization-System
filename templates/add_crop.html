@@ -1,6 +1,15 @@
 {% extends "base.html" %} {% block title %}Add New Crop - Agri-SCM{% endblock %}
 {% block content %}
 <div class="container py-4">
+  <nav aria-label="breadcrumb" class="mb-4">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item">
+        <a href="{{ url_for('crop_inventory') }}">Crop Inventory</a>
+      </li>
+      <li class="breadcrumb-item active">Add New Crop</li>
+    </ol>
+  </nav>
+
   <div class="row justify-content-center">
     <div class="col-md-8">
       <div class="card shadow">
@@ -9,7 +18,7 @@
         </div>
         <div class="card-body">
           <form method="POST" enctype="multipart/form-data">
-            {{ form.hidden_tag() }}
+            {{ form.csrf_token }}
 
             <div class="row g-3">
               <!-- Crop Name -->
@@ -36,43 +45,50 @@
                 </div>
               </div>
 
-              <!-- Planting Season -->
+              <!-- Quantity -->
               <div class="col-md-6">
                 <div class="form-group">
-                  {{ form.planting_season.label(class="form-label") }} {{
-                  form.planting_season(class="form-select" + (" is-invalid" if
-                  form.planting_season.errors else "")) }} {% for error in
-                  form.planting_season.errors %}
+                  {{ form.quantity.label(class="form-label") }} {{
+                  form.quantity(class="form-control" + (" is-invalid" if
+                  form.quantity.errors else ""), type="number", step="0.01",
+                  min="0") }} {% for error in form.quantity.errors %}
                   <div class="invalid-feedback">{{ error }}</div>
                   {% endfor %}
                 </div>
               </div>
 
-              <!-- Harvest Period -->
+              <!-- Unit -->
               <div class="col-md-6">
                 <div class="form-group">
-                  {{ form.harvest_period.label(class="form-label") }}
-                  <div class="input-group">
-                    {{ form.harvest_period(class="form-control" + (" is-invalid"
-                    if form.harvest_period.errors else "")) }}
-                    <span class="input-group-text">days</span>
-                  </div>
-                  {% for error in form.harvest_period.errors %}
+                  {{ form.unit.label(class="form-label") }} {{
+                  form.unit(class="form-control" + (" is-invalid" if
+                  form.unit.errors else "")) }} {% for error in form.unit.errors
+                  %}
                   <div class="invalid-feedback">{{ error }}</div>
                   {% endfor %}
                 </div>
               </div>
 
-              <!-- Yield per Acre -->
+              <!-- Planting Date -->
               <div class="col-md-6">
                 <div class="form-group">
-                  {{ form.yield_per_acre.label(class="form-label") }}
-                  <div class="input-group">
-                    {{ form.yield_per_acre(class="form-control" + (" is-invalid"
-                    if form.yield_per_acre.errors else "")) }}
-                    <span class="input-group-text">kg/acre</span>
-                  </div>
-                  {% for error in form.yield_per_acre.errors %}
+                  {{ form.planting_date.label(class="form-label") }} {{
+                  form.planting_date(class="form-control" + (" is-invalid" if
+                  form.planting_date.errors else ""), type="date") }} {% for
+                  error in form.planting_date.errors %}
+                  <div class="invalid-feedback">{{ error }}</div>
+                  {% endfor %}
+                </div>
+              </div>
+
+              <!-- Expected Harvest Date -->
+              <div class="col-md-6">
+                <div class="form-group">
+                  {{ form.expected_harvest_date.label(class="form-label") }} {{
+                  form.expected_harvest_date(class="form-control" + ("
+                  is-invalid" if form.expected_harvest_date.errors else ""),
+                  type="date") }} {% for error in
+                  form.expected_harvest_date.errors %}
                   <div class="invalid-feedback">{{ error }}</div>
                   {% endfor %}
                 </div>
@@ -85,8 +101,11 @@
                   <div class="input-group">
                     <span class="input-group-text">R</span>
                     {{ form.price_per_unit(class="form-control" + (" is-invalid"
-                    if form.price_per_unit.errors else "")) }}
-                    <span class="input-group-text">/kg</span>
+                    if form.price_per_unit.errors else ""), type="number",
+                    step="0.01", min="0") }}
+                    <span class="input-group-text"
+                      >/{{ form.unit.data or 'unit' }}</span
+                    >
                   </div>
                   {% for error in form.price_per_unit.errors %}
                   <div class="invalid-feedback">{{ error }}</div>
@@ -109,15 +128,26 @@
               <!-- Image Upload -->
               <div class="col-12">
                 <div class="form-group">
-                  {{ form.image.label(class="form-label") }} {{
-                  form.image(class="form-control" + (" is-invalid" if
-                  form.image.errors else "")) }}
+                  {{ form.image.label(class="form-label") }}
+                  <div class="input-group">
+                    {{ form.image(class="form-control" + (" is-invalid" if
+                    form.image.errors else ""), accept="image/*",
+                    onchange="previewImage(this)") }}
+                  </div>
                   <div class="form-text">
-                    Upload an image of your crop (optional)
+                    Supported formats: JPG, JPEG, PNG, GIF. Max file size: 5MB
                   </div>
                   {% for error in form.image.errors %}
                   <div class="invalid-feedback">{{ error }}</div>
                   {% endfor %}
+                  <div id="imagePreview" class="mt-2 d-none">
+                    <img
+                      src=""
+                      alt="Image preview"
+                      class="img-fluid rounded"
+                      style="max-height: 200px"
+                    />
+                  </div>
                 </div>
               </div>
             </div>
@@ -127,8 +157,8 @@
                 <i class="bi bi-plus-circle me-2"></i>Add Crop
               </button>
               <a
-                href="{{ url_for('farmer_dashboard') }}"
-                class="btn btn-outline-secondary"
+                href="{{ url_for('crop_inventory') }}"
+                class="btn btn-secondary"
               >
                 <i class="bi bi-x-circle me-2"></i>Cancel
               </a>
@@ -141,71 +171,52 @@
 </div>
 {% endblock %} {% block scripts %}
 <script>
-  document.addEventListener("DOMContentLoaded", function () {
-    // Preview image before upload
-    const imageInput = document.querySelector('input[type="file"]');
-    imageInput.addEventListener("change", function () {
-      if (this.files && this.files[0]) {
-        const reader = new FileReader();
-        reader.onload = function (e) {
-          const preview = document.createElement("img");
-          preview.src = e.target.result;
-          preview.className = "img-fluid mt-2 rounded";
-          preview.style.maxHeight = "200px";
+  function previewImage(input) {
+    const preview = document.getElementById("imagePreview");
+    const previewImg = preview.querySelector("img");
 
-          const existingPreview =
-            imageInput.nextElementSibling.nextElementSibling;
-          if (existingPreview && existingPreview.tagName === "IMG") {
-            existingPreview.remove();
-          }
+    if (input.files && input.files[0]) {
+      const reader = new FileReader();
 
-          imageInput.parentNode.appendChild(preview);
-        };
-        reader.readAsDataURL(this.files[0]);
-      }
+      reader.onload = function (e) {
+        previewImg.src = e.target.result;
+        preview.classList.remove("d-none");
+      };
+
+      reader.readAsDataURL(input.files[0]);
+    } else {
+      previewImg.src = "";
+      preview.classList.add("d-none");
+    }
+  }
+
+  // Update price unit when unit changes
+  document
+    .querySelector('select[name="unit"]')
+    .addEventListener("change", function (e) {
+      const unitSpan = document.querySelector(".input-group-text:last-child");
+      unitSpan.textContent = "/" + e.target.value;
     });
 
-    // Calculate expected harvest date based on planting season and harvest period
-    const plantingSeasonSelect = document.getElementById("planting_season");
-    const harvestPeriodInput = document.getElementById("harvest_period");
+  // Validate file size before upload
+  document.querySelector("form").addEventListener("submit", function (e) {
+    const fileInput = document.querySelector('input[type="file"]');
+    const maxSize = 5 * 1024 * 1024; // 5MB
 
-    function updateExpectedHarvest() {
-      const season = plantingSeasonSelect.value;
-      const period = harvestPeriodInput.value;
-
-      if (season && period) {
-        const seasonStartDates = {
-          spring: "03-01",
-          summer: "06-01",
-          fall: "09-01",
-          winter: "12-01",
-        };
-
-        const startDate = new Date(
-          new Date().getFullYear() + "-" + seasonStartDates[season]
-        );
-        const harvestDate = new Date(
-          startDate.setDate(startDate.getDate() + parseInt(period))
-        );
-
-        // Update UI with expected harvest date
-        const harvestDateDisplay = document.getElementById(
-          "expected_harvest_date"
-        );
-        if (!harvestDateDisplay) {
-          const div = document.createElement("div");
-          div.className = "mt-3 text-muted";
-          div.id = "expected_harvest_date";
-          harvestPeriodInput.parentNode.parentNode.appendChild(div);
-        }
-        document.getElementById(
-          "expected_harvest_date"
-        ).textContent = `Expected harvest date: ${harvestDate.toLocaleDateString()}`;
-      }
+    if (fileInput.files.length > 0 && fileInput.files[0].size > maxSize) {
+      e.preventDefault();
+      alert("File size exceeds 5MB. Please choose a smaller file.");
     }
-
-    plantingSeasonSelect.addEventListener("change", updateExpectedHarvest);
-    harvestPeriodInput.addEventListener("input", updateExpectedHarvest);
   });
+
+  // Set min date for expected harvest date based on planting date
+  document
+    .querySelector('input[name="planting_date"]')
+    .addEventListener("change", function (e) {
+      const expectedHarvestInput = document.querySelector(
+        'input[name="expected_harvest_date"]'
+      );
+      expectedHarvestInput.min = e.target.value;
+    });
 </script>
 {% endblock %}

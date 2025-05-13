@@ -72,41 +72,64 @@ class RegistrationForm(FlaskForm):
             raise ValidationError('Email already registered. Please use a different one.')
 
 class CropForm(FlaskForm):
-    name = SelectField('Crop Name', choices=[
-        ('Maize', 'Maize'),
-        ('Wheat', 'Wheat'),
-        ('Potatoes', 'Potatoes'),
-        ('Tomatoes', 'Tomatoes'),
-        ('Onions', 'Onions')
+    name = StringField('Crop Name', validators=[
+        DataRequired(),
+        Length(min=2, max=100, message='Name must be between 2 and 100 characters')
+    ])
+    
+    variety = StringField('Variety', validators=[
+        Optional(),
+        Length(max=100, message='Variety name must not exceed 100 characters')
+    ])
+    
+    quantity = FloatField('Quantity', validators=[
+        DataRequired(),
+        NumberRange(min=0, message='Quantity must be greater than 0')
+    ])
+    
+    unit = SelectField('Unit', choices=[
+        ('kg', 'Kilograms (kg)'),
+        ('g', 'Grams (g)'),
+        ('ton', 'Tons'),
+        ('piece', 'Pieces')
     ], validators=[DataRequired()])
-    variety = StringField('Variety', validators=[DataRequired()])
+    
+    planting_date = DateField('Planting Date', validators=[DataRequired()])
+    expected_harvest_date = DateField('Expected Harvest Date', validators=[DataRequired()])
+    
     planting_season = SelectField('Planting Season', choices=[
         ('spring', 'Spring'),
         ('summer', 'Summer'),
         ('fall', 'Fall'),
         ('winter', 'Winter')
     ], validators=[DataRequired()])
+    
     harvest_period = IntegerField('Harvest Period (days)', validators=[
-        DataRequired(),
-        NumberRange(min=30, max=365, message='Harvest period must be between 30 and 365 days')
+        Optional(),
+        NumberRange(min=1, message='Harvest period must be at least 1 day')
     ])
-    yield_per_acre = FloatField('Expected Yield per Acre', validators=[
-        DataRequired(),
-        NumberRange(min=0, message='Yield must be positive')
+    
+    yield_per_acre = FloatField('Yield per Acre', validators=[
+        Optional(),
+        NumberRange(min=0, message='Yield must be greater than 0')
     ])
+    
     price_per_unit = FloatField('Price per Unit (R)', validators=[
         DataRequired(),
-        NumberRange(min=0, message='Price must be positive')
+        NumberRange(min=0, message='Price must be greater than 0')
     ])
+    
     description = TextAreaField('Description', validators=[
         Optional(),
-        Length(max=500, message='Description must be less than 500 characters')
+        Length(max=500, message='Description must not exceed 500 characters')
     ])
+    
     image = FileField('Crop Image', validators=[
         Optional(),
-        FileAllowed(['jpg', 'jpeg', 'png', 'gif'], 'Images only! Allowed formats: JPG, JPEG, PNG, GIF')
+        FileAllowed(['jpg', 'jpeg', 'png', 'gif'], 'Only images (jpg, jpeg, png, gif) are allowed!')
     ])
-    submit = SubmitField('Add Crop')
+    
+    submit = SubmitField('Save Crop')
 
 class CreateOrderForm(FlaskForm):
     farmer_id = SelectField('Farmer', coerce=int, validators=[DataRequired()])

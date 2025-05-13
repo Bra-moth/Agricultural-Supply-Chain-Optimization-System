@@ -94,7 +94,7 @@ class CropForm(FlaskForm):
         DataRequired(),
         NumberRange(min=0, message='Yield must be positive')
     ])
-    price_per_unit = FloatField('Price per Unit', validators=[
+    price_per_unit = FloatField('Price per Unit (R)', validators=[
         DataRequired(),
         NumberRange(min=0, message='Price must be positive')
     ])
@@ -104,7 +104,7 @@ class CropForm(FlaskForm):
     ])
     image = FileField('Crop Image', validators=[
         Optional(),
-        FileAllowed(['jpg', 'jpeg', 'png'], 'Images only!')
+        FileAllowed(['jpg', 'jpeg', 'png', 'gif'], 'Images only! Allowed formats: JPG, JPEG, PNG, GIF')
     ])
     submit = SubmitField('Add Crop')
 
@@ -129,3 +129,18 @@ class CreateOrderForm(FlaskForm):
             (product.id, f"{product.name} (${product.price_per_unit:.2f}/{product.unit})")
             for product in Product.query.all()
         ]
+
+class PlaceOrderForm(FlaskForm):
+    quantity = FloatField('Quantity', validators=[
+        DataRequired(),
+        NumberRange(min=0.1, message='Quantity must be greater than 0')
+    ])
+    delivery_address = StringField('Delivery Address', validators=[
+        DataRequired(),
+        Length(min=10, max=200, message='Address must be between 10 and 200 characters')
+    ])
+    notes = TextAreaField('Order Notes', validators=[
+        Optional(),
+        Length(max=500, message='Notes must be less than 500 characters')
+    ])
+    submit = SubmitField('Place Order')

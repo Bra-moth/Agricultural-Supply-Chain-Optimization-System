@@ -1,0 +1,132 @@
+{% extends "base.html" %} {% block title %}Available Crops - Agri-SCM{% endblock
+%} {% block content %}
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h2 class="mb-0">Available Crops</h2>
+      <p class="text-muted">Browse crops ready for purchase</p>
+    </div>
+  </div>
+
+  <div class="row g-4">
+    {% for crop in crops %}
+    <div class="col-md-6 col-lg-4">
+      <div class="card h-100 shadow-sm">
+        {% if crop.image %}
+        <img
+          src="{{ crop.image_url }}"
+          class="card-img-top crop-image"
+          alt="{{ crop.name }}"
+          style="height: 200px; object-fit: cover; cursor: pointer"
+          onclick="openImagePreview(this.src, '{{ crop.name }}')"
+        />
+        {% else %}
+        <div
+          class="card-img-top bg-light d-flex align-items-center justify-content-center"
+          style="height: 200px"
+        >
+          <i class="bi bi-image text-muted" style="font-size: 3rem"></i>
+        </div>
+        {% endif %}
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="card-title mb-0">{{ crop.name }}</h5>
+            <span class="badge bg-success">Ready for Harvest</span>
+          </div>
+          <p class="text-muted mb-2">Variety: {{ crop.variety }}</p>
+          <div class="mb-3">
+            <div class="d-flex justify-content-between mb-2">
+              <span>Available Quantity:</span>
+              <span class="fw-bold">{{ crop.quantity }} {{ crop.unit }}</span>
+            </div>
+            <div class="d-flex justify-content-between mb-2">
+              <span>Price per Unit:</span>
+              <span class="fw-bold text-success"
+                >R{{ crop.price_per_unit }}/{{ crop.unit }}</span
+              >
+            </div>
+            <div class="d-flex justify-content-between">
+              <span>Farmer:</span>
+              <span class="fw-bold">{{ crop.farmer.username }}</span>
+            </div>
+          </div>
+          {% if crop.description %}
+          <p class="card-text small">{{ crop.description|truncate(100) }}</p>
+          {% endif %}
+        </div>
+        <div class="card-footer bg-transparent">
+          <div class="d-flex justify-content-between align-items-center">
+            <small class="text-muted"
+              >Listed {{ crop.created_at.strftime('%Y-%m-%d') }}</small
+            >
+            <div class="btn-group">
+              <a
+                href="{{ url_for('crop_detail', crop_id=crop.id) }}"
+                class="btn btn-sm btn-outline-primary"
+              >
+                <i class="bi bi-eye me-1"></i>View Details
+              </a>
+              {% if current_user.role == 'retailer' %}
+              <a
+                href="{{ url_for('place_order', crop_id=crop.id) }}"
+                class="btn btn-sm btn-outline-success"
+              >
+                <i class="bi bi-cart-plus me-1"></i>Place Order
+              </a>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% else %}
+    <div class="col-12">
+      <div class="alert alert-info">
+        <i class="bi bi-info-circle me-2"></i>
+        No crops are currently available for purchase.
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- Image Preview Modal -->
+<div class="modal fade" id="imagePreviewModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Crop Image</h5>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+        ></button>
+      </div>
+      <div class="modal-body text-center">
+        <img id="previewImage" src="" class="img-fluid" alt="Crop Image" />
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %} {% block styles %}
+<style>
+  .crop-image {
+    transition: opacity 0.3s;
+  }
+  .crop-image:hover {
+    opacity: 0.9;
+  }
+</style>
+{% endblock %} {% block scripts %}
+<script>
+  function openImagePreview(src, cropName) {
+    const modal = new bootstrap.Modal(
+      document.getElementById("imagePreviewModal")
+    );
+    document.getElementById("previewImage").src = src;
+    document.querySelector("#imagePreviewModal .modal-title").textContent =
+      cropName + " Image";
+    modal.show();
+  }
+</script>
+{% endblock %}

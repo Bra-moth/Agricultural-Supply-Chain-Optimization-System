@@ -1,23 +1,50 @@
-{% extends "base.html" %}
-
-{% block content %}
-<div class="container">
-    <h2>Current Market Prices</h2>
-    <table class="table">
-        <thead>
+{% extends "base.html" %} {% block content %}
+<div class="container py-4">
+  <div class="card shadow">
+    <div class="card-header bg-success text-white">
+      <h3 class="mb-0">Current Market Prices</h3>
+    </div>
+    <div class="card-body">
+      <div class="table-responsive">
+        <table class="table table-hover">
+          <thead class="table-light">
             <tr>
-                <th>Crop</th>
-                <th>Price (per kg)</th>
+              <th>Crop</th>
+              <th>Price (per kg)</th>
+              <th>24h Change</th>
             </tr>
-        </thead>
-        <tbody>
+          </thead>
+          <tbody>
             {% for crop, price in prices.items() %}
             <tr>
-                <td>{{ crop }}</td>
-                <td>${{ price }}</td>
+              <td>
+                <div class="d-flex align-items-center">
+                  <i class="bi bi-flower1 text-success me-2"></i>
+                  <span>{{ crop }}</span>
+                </div>
+              </td>
+              <td>
+                <span class="fw-bold">R{{ price }}</span>
+              </td>
+              <td>
+                {% set change = range(-5, 5)|random %}
+                <span
+                  class="badge bg-{{ 'success' if change >= 0 else 'danger' }}"
+                >
+                  {{ '+' if change >= 0 else '' }}{{ change }}%
+                </span>
+              </td>
             </tr>
             {% endfor %}
-        </tbody>
-    </table>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card-footer text-muted">
+      <small
+        >Last updated: {{ datetime.now().strftime('%Y-%m-%d %H:%M') }}</small
+      >
+    </div>
+  </div>
 </div>
 {% endblock %}

@@ -26,7 +26,7 @@ endblock %} {% block content %}
       <div class="card bg-success text-white h-100">
         <div class="card-body">
           <h5 class="card-title">Total Revenue</h5>
-          <h2 class="card-text">R{{ total_revenue|default(0)|round(2) }}</h2>
+          <h2 class="card-text">R{{ total_revenue|round(2) }}</h2>
           <p class="mb-0">This month</p>
         </div>
       </div>
@@ -51,10 +51,11 @@ endblock %} {% block content %}
     </div>
   </div>
 
-  <div class="row">
+  <!-- Crop Management and Analytics -->
+  <div class="row g-4">
     <!-- Crop Management -->
-    <div class="col-md-8 mb-4">
-      <div class="card">
+    <div class="col-md-8">
+      <div class="card h-100">
         <div
           class="card-header d-flex justify-content-between align-items-center"
         >
@@ -89,22 +90,12 @@ endblock %} {% block content %}
                     </span>
                   </td>
                   <td>
-                    <div class="btn-group">
-                      <a
-                        href="{{ url_for('crop_detail', crop_id=crop.id) }}"
-                        class="btn btn-sm btn-outline-primary"
-                      >
-                        <i class="bi bi-eye"></i>
-                      </a>
-                      {% if crop.status == 'ready_for_harvest' %}
-                      <button
-                        class="btn btn-sm btn-outline-success"
-                        onclick="harvestCrop({{ crop.id }})"
-                      >
-                        <i class="bi bi-scissors"></i>
-                      </button>
-                      {% endif %}
-                    </div>
+                    <a
+                      href="{{ url_for('crop_detail', crop_id=crop.id) }}"
+                      class="btn btn-sm btn-outline-primary"
+                    >
+                      <i class="bi bi-eye"></i>
+                    </a>
                   </td>
                 </tr>
                 {% endfor %}
@@ -116,8 +107,8 @@ endblock %} {% block content %}
     </div>
 
     <!-- Market Prices -->
-    <div class="col-md-4 mb-4">
-      <div class="card">
+    <div class="col-md-4">
+      <div class="card h-100">
         <div class="card-header">
           <h5 class="mb-0">Current Market Prices</h5>
         </div>
@@ -127,7 +118,9 @@ endblock %} {% block content %}
             <div
               class="list-group-item d-flex justify-content-between align-items-center"
             >
-              <span>{{ crop }}</span>
+              <div>
+                <h6 class="mb-0">{{ crop }}</h6>
+              </div>
               <span class="badge bg-success rounded-pill">R{{ price }}/kg</span>
             </div>
             {% endfor %}
@@ -135,64 +128,87 @@ endblock %} {% block content %}
         </div>
       </div>
     </div>
-  </div>
 
-  <div class="row">
-    <!-- Analytics -->
-    <div class="col-md-6 mb-4">
-      <div class="card">
-        <div class="card-header">
-          <h5 class="mb-0">Crop Performance</h5>
-        </div>
-        <div class="card-body">
-          <canvas id="cropPerformanceChart" height="300"></canvas>
-        </div>
-      </div>
-    </div>
-
-    <!-- Revenue Analytics -->
-    <div class="col-md-6 mb-4">
-      <div class="card">
-        <div class="card-header">
-          <h5 class="mb-0">Revenue Trends</h5>
-        </div>
-        <div class="card-body">
-          <canvas id="revenueChart" height="300"></canvas>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Connected Distributors -->
-  <div class="row">
-    <div class="col-12 mb-4">
-      <div class="card">
+    <!-- Crop Performance Chart -->
+    <div class="col-md-6">
+      <div class="card h-100">
         <div
           class="card-header d-flex justify-content-between align-items-center"
         >
+          <h5 class="mb-0">Crop Performance</h5>
+          <div class="btn-group">
+            <button
+              type="button"
+              class="btn btn-sm btn-outline-secondary"
+              onclick="updateCropChart('yield')"
+            >
+              Yield
+            </button>
+            <button
+              type="button"
+              class="btn btn-sm btn-outline-secondary"
+              onclick="updateCropChart('revenue')"
+            >
+              Revenue
+            </button>
+          </div>
+        </div>
+        <div class="card-body">
+          <canvas id="cropPerformanceChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Revenue Trends -->
+    <div class="col-md-6">
+      <div class="card h-100">
+        <div
+          class="card-header d-flex justify-content-between align-items-center"
+        >
+          <h5 class="mb-0">Revenue Trends</h5>
+          <div class="btn-group">
+            <button
+              type="button"
+              class="btn btn-sm btn-outline-secondary"
+              onclick="updateRevenueChart('monthly')"
+            >
+              Monthly
+            </button>
+            <button
+              type="button"
+              class="btn btn-sm btn-outline-secondary"
+              onclick="updateRevenueChart('yearly')"
+            >
+              Yearly
+            </button>
+          </div>
+        </div>
+        <div class="card-body">
+          <canvas id="revenueTrendsChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Connected Distributors -->
+    <div class="col-md-12">
+      <div class="card">
+        <div class="card-header">
           <h5 class="mb-0">Connected Distributors</h5>
-          <button
-            class="btn btn-success btn-sm"
-            data-bs-toggle="modal"
-            data-bs-target="#findDistributorsModal"
-          >
-            <i class="bi bi-search"></i> Find Distributors
-          </button>
         </div>
         <div class="card-body">
           <div class="row g-4">
             {% for distributor in connected_distributors %}
             <div class="col-md-4">
-              <div class="card h-100 border">
+              <div class="card h-100 border-0 shadow-sm">
                 <div class="card-body">
                   <h6 class="card-title">{{ distributor.username }}</h6>
-                  <p class="card-text small">
-                    <i class="bi bi-geo-alt"></i> {{ distributor.location }}
+                  <p class="card-text text-muted small">
+                    {{ distributor.location }}
                   </p>
                   <div
                     class="d-flex justify-content-between align-items-center"
                   >
-                    <span class="badge bg-info"
+                    <span class="badge bg-success"
                       >{{ distributor.total_orders }} Orders</span
                     >
                     <button class="btn btn-sm btn-outline-primary">
@@ -250,71 +266,144 @@ endblock %} {% block content %}
 {% endblock %} {% block scripts %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-  // Harvest crop function
-  function harvestCrop(cropId) {
-    if (confirm("Are you sure you want to mark this crop as harvested?")) {
-      fetch(`/api/harvest_crop/${cropId}`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      })
-        .then((response) => response.json())
-        .then((data) => {
-          if (data.success) {
-            location.reload();
-          } else {
-            alert("Failed to harvest crop: " + data.error);
-          }
-        });
-    }
-  }
+  // Crop performance data
+  const cropPerformanceData = {
+    labels: {{ crop_performance_labels|tojson }},
+    yieldData: {{ crop_performance_data|tojson }},
+    revenueData: {{ revenue_data|tojson }}
+  };
 
   // Initialize charts
-  document.addEventListener("DOMContentLoaded", function () {
-    // Crop Performance Chart
-    const cropCtx = document.getElementById("cropPerformanceChart").getContext("2d");
-    new Chart(cropCtx, {
-      type: "bar",
+  let cropPerformanceChart;
+  let revenueTrendsChart;
+
+  // Create crop performance chart
+  function createCropPerformanceChart(type = 'yield') {
+    const ctx = document.getElementById('cropPerformanceChart').getContext('2d');
+
+    if (cropPerformanceChart) {
+      cropPerformanceChart.destroy();
+    }
+
+    cropPerformanceChart = new Chart(ctx, {
+      type: 'line',
       data: {
-        labels: {{ crop_performance_labels|tojson }},
+        labels: cropPerformanceData.labels,
         datasets: [{
-          label: "Yield (kg)",
-          data: {{ crop_performance_data|tojson }},
-          backgroundColor: "rgba(75, 192, 192, 0.2)",
-          borderColor: "rgb(75, 192, 192)",
+          label: type === 'yield' ? 'Yield (kg)' : 'Revenue (R)',
+          data: type === 'yield' ? cropPerformanceData.yieldData : cropPerformanceData.revenueData,
+          borderColor: '#198754',
+          backgroundColor: 'rgba(25, 135, 84, 0.1)',
+          tension: 0.4,
+          fill: true
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'top',
+          },
+          title: {
+            display: true,
+            text: type === 'yield' ? 'Crop Yield Over Time' : 'Crop Revenue Over Time'
+          }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: {
+              callback: function(value) {
+                return type === 'yield' ? value + ' kg' : 'R' + value;
+              }
+            }
+          }
+        }
+      }
+    });
+  }
+
+  // Create revenue trends chart
+  function createRevenueTrendsChart(period = 'monthly') {
+    const ctx = document.getElementById('revenueTrendsChart').getContext('2d');
+
+    if (revenueTrendsChart) {
+      revenueTrendsChart.destroy();
+    }
+
+    revenueTrendsChart = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: {{ revenue_labels|tojson }},
+        datasets: [{
+          label: 'Revenue',
+          data: {{ revenue_data|tojson }},
+          backgroundColor: 'rgba(25, 135, 84, 0.7)',
+          borderColor: '#198754',
           borderWidth: 1
         }]
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'top',
+          },
+          title: {
+            display: true,
+            text: period === 'monthly' ? 'Monthly Revenue' : 'Yearly Revenue'
+          }
+        },
         scales: {
           y: {
-            beginAtZero: true
+            beginAtZero: true,
+            ticks: {
+              callback: function(value) {
+                return 'R' + value;
+              }
+            }
           }
         }
       }
     });
+  }
 
-    // Revenue Chart
-    const revenueCtx = document.getElementById("revenueChart").getContext("2d");
-    new Chart(revenueCtx, {
-      type: "line",
-      data: {
-        labels: {{ revenue_labels|tojson }},
-        datasets: [{
-          label: "Monthly Revenue",
-          data: {{ revenue_data|tojson }},
-          borderColor: "rgb(75, 192, 192)",
-          tension: 0.1
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false
-      }
-    });
+  // Update chart type functions
+  function updateCropChart(type) {
+    createCropPerformanceChart(type);
+  }
+
+  function updateRevenueChart(period) {
+    createRevenueTrendsChart(period);
+  }
+
+  // Initialize charts on page load
+  document.addEventListener('DOMContentLoaded', function() {
+    createCropPerformanceChart();
+    createRevenueTrendsChart();
   });
 </script>
+{% endblock %} {% block styles %}
+<style>
+  .card {
+    transition: all 0.3s ease;
+  }
+
+  .card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+  }
+
+  .badge {
+    font-size: 0.9em;
+    padding: 0.5em 0.8em;
+  }
+
+  .chart-container {
+    position: relative;
+    height: 300px;
+  }
+</style>
 {% endblock %}

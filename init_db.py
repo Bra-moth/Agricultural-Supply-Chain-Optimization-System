@@ -3,7 +3,6 @@ from app import app, db
 from models import User, Crop, Product, Order, RestockOrder, Supplier, Cart, CartItem, InventoryItem, Delivery, OrderItem
 from werkzeug.security import generate_password_hash
 from datetime import datetime, timedelta
-from zoneinfo import ZoneInfo
 
 def initialize_database():
     # Ensure instance folder exists
@@ -105,22 +104,30 @@ def add_sample_data():
                 variety="Yellow Maize",
                 quantity=1000,
                 unit="kg",
-                planting_date=datetime.now(ZoneInfo('Africa/Johannesburg')) - timedelta(days=60),
-                expected_harvest_date=datetime.now(ZoneInfo('Africa/Johannesburg')) + timedelta(days=30),
+                planting_date=datetime.utcnow() - timedelta(days=60),
+                expected_harvest_date=datetime.utcnow() + timedelta(days=30),
                 status="growing",
-                notes="Yellow maize variety, healthy growth",
-                farmer_id=users[0].id
+                description="Yellow maize variety, healthy growth",
+                farmer_id=users[0].id,
+                planting_season="spring",
+                harvest_period=90,
+                yield_per_acre=1000,
+                price_per_unit=150.0
             ),
             Crop(
                 name="Beans",
                 variety="Red Kidney",
                 quantity=500,
                 unit="kg",
-                planting_date=datetime.now(ZoneInfo('Africa/Johannesburg')) - timedelta(days=30),
-                expected_harvest_date=datetime.now(ZoneInfo('Africa/Johannesburg')) + timedelta(days=30),
+                planting_date=datetime.utcnow() - timedelta(days=30),
+                expected_harvest_date=datetime.utcnow() + timedelta(days=30),
                 status="growing",
-                notes="Red kidney beans, organic farming",
-                farmer_id=users[0].id
+                description="Red kidney beans, organic farming",
+                farmer_id=users[0].id,
+                planting_season="summer",
+                harvest_period=90,
+                yield_per_acre=500,
+                price_per_unit=30.0
             )
         ]
         db.session.add_all(crops)
@@ -135,8 +142,8 @@ def add_sample_data():
                 distributor_id=users[1].id,
                 status="completed",
                 total_amount=100.00,
-                created_at=datetime.now(ZoneInfo('Africa/Johannesburg')) - timedelta(days=10),
-                completed_at=datetime.now(ZoneInfo('Africa/Johannesburg')) - timedelta(days=5),
+                created_at=datetime.utcnow() - timedelta(days=10),
+                completed_at=datetime.utcnow() - timedelta(days=5),
                 notes="First order completed successfully"
             ),
             Order(
@@ -145,7 +152,7 @@ def add_sample_data():
                 distributor_id=users[1].id,
                 status="pending",
                 total_amount=120.00,
-                created_at=datetime.now(ZoneInfo('Africa/Johannesburg')) - timedelta(days=2),
+                created_at=datetime.utcnow() - timedelta(days=2),
                 notes="Second order pending"
             )
         ]
@@ -214,22 +221,30 @@ def add_sample_data():
                 'variety': 'Yellow Dent',
                 'quantity': 1000,
                 'unit': 'kg',
-                'planting_date': datetime.now() - timedelta(days=45),
-                'expected_harvest_date': datetime.now() + timedelta(days=45),
+                'planting_date': datetime.utcnow(),
+                'expected_harvest_date': datetime.utcnow() + timedelta(days=90),
                 'status': 'growing',
-                'notes': 'High-yield yellow dent corn variety',
-                'farmer_id': farmer.id
+                'description': 'High-yield yellow dent corn variety',
+                'farmer_id': farmer.id,
+                'planting_season': 'spring',
+                'harvest_period': 90,
+                'yield_per_acre': 1000,
+                'price_per_unit': 150.0
             },
             {
                 'name': 'Tomatoes',
                 'variety': 'Roma',
                 'quantity': 500,
                 'unit': 'kg',
-                'planting_date': datetime.now() - timedelta(days=70),
-                'expected_harvest_date': datetime.now() + timedelta(days=20),
+                'planting_date': datetime.utcnow() - timedelta(days=70),
+                'expected_harvest_date': datetime.utcnow() + timedelta(days=20),
                 'status': 'ready_for_harvest',
-                'notes': 'Disease-resistant Roma tomatoes',
-                'farmer_id': farmer.id
+                'description': 'Disease-resistant Roma tomatoes',
+                'farmer_id': farmer.id,
+                'planting_season': 'summer',
+                'harvest_period': 90,
+                'yield_per_acre': 500,
+                'price_per_unit': 30.0
             }
         ]
         
@@ -282,7 +297,7 @@ def add_sample_data():
             distributor_id=distributor.id,
             status='processing',
             total_amount=900.0,
-            created_at=datetime.now() - timedelta(days=2)
+            created_at=datetime.utcnow() - timedelta(days=2)
         )
         db.session.add(test_order)
         db.session.commit()
@@ -312,7 +327,7 @@ def add_sample_data():
             order_id=test_order.id,
             distributor_id=distributor.id,
             status='scheduled',
-            scheduled_date=datetime.now() + timedelta(days=1),
+            scheduled_date=datetime.utcnow() + timedelta(days=1),
             delivery_address=retailer.location,
             tracking_number='TRK123456789'
         )

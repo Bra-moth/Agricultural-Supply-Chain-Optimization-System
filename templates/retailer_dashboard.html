@@ -206,6 +206,7 @@ endblock %} {% block content %}
   </div>
 </div>
 {% endblock %} {% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
   // Cart management
   let cart = [];
@@ -231,7 +232,7 @@ endblock %} {% block content %}
                     <small>R${item.price_per_unit}</small>
                 </div>
                 <div class="d-flex align-items-center">
-                    <input type="number" class="form-control form-control-sm w-25" 
+                    <input type="number" class="form-control form-control-sm w-25"
                            value="1" min="1" max="${item.current_stock}">
                     <button class="btn btn-sm btn-danger ms-2"
                             onclick="removeFromCart(${item.id})">
@@ -280,20 +281,38 @@ endblock %} {% block content %}
     new Chart(salesCtx, {
       type: "line",
       data: {
-        labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
-        datasets: [
-          {
-            label: "Monthly Sales",
-            data: [65, 59, 80, 81, 56, 55],
-            borderColor: "rgb(75, 192, 192)",
-            tension: 0.1,
-          },
-        ],
+        labels: {{ sales_labels|tojson }},
+        datasets: [{
+          label: 'Monthly Sales (R)',
+          data: {{ sales_data|tojson }},
+          borderColor: 'rgb(75, 192, 192)',
+          tension: 0.1,
+          fill: false
+        }]
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
-      },
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: {
+              callback: function(value) {
+                return 'R' + value.toFixed(2);
+              }
+            }
+          }
+        },
+        plugins: {
+          tooltip: {
+            callbacks: {
+              label: function(context) {
+                return 'Sales: R' + context.parsed.y.toFixed(2);
+              }
+            }
+          }
+        }
+      }
     });
 
     // Products Chart
@@ -303,23 +322,36 @@ endblock %} {% block content %}
     new Chart(productsCtx, {
       type: "doughnut",
       data: {
-        labels: ["Vegetables", "Fruits", "Grains", "Others"],
-        datasets: [
-          {
-            data: [30, 25, 20, 25],
-            backgroundColor: [
-              "rgb(75, 192, 192)",
-              "rgb(255, 159, 64)",
-              "rgb(255, 205, 86)",
-              "rgb(201, 203, 207)",
-            ],
-          },
-        ],
+        labels: {{ product_labels|tojson }},
+        datasets: [{
+          data: {{ product_quantities|tojson }},
+          backgroundColor: [
+            'rgb(75, 192, 192)',
+            'rgb(255, 159, 64)',
+            'rgb(255, 205, 86)',
+            'rgb(201, 203, 207)',
+            'rgb(54, 162, 235)'
+          ]
+        }]
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
-      },
+        plugins: {
+          legend: {
+            position: 'right'
+          },
+          tooltip: {
+            callbacks: {
+              label: function(context) {
+                return context.label + ': ' +
+                       context.parsed + ' units (' +
+                       Math.round(context.parsed * 100 / context.dataset.data.reduce((a, b) => a + b, 0)) + '%)';
+              }
+            }
+          }
+        }
+      }
     });
   });
 </script>

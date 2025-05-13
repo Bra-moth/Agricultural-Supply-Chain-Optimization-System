@@ -65,7 +65,16 @@
                 >Market Prices</a
               >
             </li>
-            {% endif %}
+            {% if current_user.role in ['distributor', 'retailer'] %}
+            <li class="nav-item">
+              <a
+                class="nav-link {{ 'active' if request.endpoint == 'available_crops' }}"
+                href="{{ url_for('available_crops') }}"
+              >
+                <i class="bi bi-basket me-2"></i>Available Crops
+              </a>
+            </li>
+            {% endif %} {% endif %}
           </ul>
           <ul class="navbar-nav">
             {% if current_user.is_authenticated %}

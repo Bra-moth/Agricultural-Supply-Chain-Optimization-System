@@ -18,7 +18,7 @@
         </div>
         <div class="card-body">
           <form method="POST" enctype="multipart/form-data">
-            {{ form.csrf_token }}
+            {{ form.hidden_tag() }}
 
             <div class="row g-3">
               <!-- Crop Name -->
@@ -61,7 +61,7 @@
               <div class="col-md-6">
                 <div class="form-group">
                   {{ form.unit.label(class="form-label") }} {{
-                  form.unit(class="form-control" + (" is-invalid" if
+                  form.unit(class="form-select" + (" is-invalid" if
                   form.unit.errors else "")) }} {% for error in form.unit.errors
                   %}
                   <div class="invalid-feedback">{{ error }}</div>
@@ -89,6 +89,43 @@
                   is-invalid" if form.expected_harvest_date.errors else ""),
                   type="date") }} {% for error in
                   form.expected_harvest_date.errors %}
+                  <div class="invalid-feedback">{{ error }}</div>
+                  {% endfor %}
+                </div>
+              </div>
+
+              <!-- Planting Season -->
+              <div class="col-md-6">
+                <div class="form-group">
+                  {{ form.planting_season.label(class="form-label") }} {{
+                  form.planting_season(class="form-select" + (" is-invalid" if
+                  form.planting_season.errors else "")) }} {% for error in
+                  form.planting_season.errors %}
+                  <div class="invalid-feedback">{{ error }}</div>
+                  {% endfor %}
+                </div>
+              </div>
+
+              <!-- Harvest Period -->
+              <div class="col-md-6">
+                <div class="form-group">
+                  {{ form.harvest_period.label(class="form-label") }} {{
+                  form.harvest_period(class="form-control" + (" is-invalid" if
+                  form.harvest_period.errors else ""), type="number", min="1")
+                  }} {% for error in form.harvest_period.errors %}
+                  <div class="invalid-feedback">{{ error }}</div>
+                  {% endfor %}
+                </div>
+              </div>
+
+              <!-- Yield per Acre -->
+              <div class="col-md-6">
+                <div class="form-group">
+                  {{ form.yield_per_acre.label(class="form-label") }} {{
+                  form.yield_per_acre(class="form-control" + (" is-invalid" if
+                  form.yield_per_acre.errors else ""), type="number",
+                  step="0.01", min="0") }} {% for error in
+                  form.yield_per_acre.errors %}
                   <div class="invalid-feedback">{{ error }}</div>
                   {% endfor %}
                 </div>
@@ -131,9 +168,8 @@
                   {{ form.image.label(class="form-label") }}
                   <div class="input-group">
                     {{ form.image(class="form-control" + (" is-invalid" if
-                    form.image.errors else ""),
-                                 accept="image/*",
-                                 onchange="validateAndPreviewImage(this)") }}
+                    form.image.errors else ""), accept="image/*",
+                    onchange="validateAndPreviewImage(this)") }}
                   </div>
                   <div class="form-text">
                     Supported formats: JPG, JPEG, PNG, GIF. Max file size: 5MB
@@ -143,9 +179,18 @@
                   {% endfor %}
                   <div id="imagePreview" class="mt-2 d-none">
                     <div class="position-relative">
-                      <img src="" alt="Image preview" class="img-fluid rounded" style="max-height: 200px"/>
+                      <img
+                        src=""
+                        alt="Image preview"
+                        class="img-fluid rounded"
+                        style="max-height: 200px"
+                      />
                       <div class="position-absolute top-0 end-0 m-2">
-                        <button type="button" class="btn btn-sm btn-danger" onclick="clearImagePreview()">
+                        <button
+                          type="button"
+                          class="btn btn-sm btn-danger"
+                          onclick="clearImagePreview()"
+                        >
                           <i class="bi bi-x-lg"></i>
                         </button>
                       </div>
@@ -160,9 +205,7 @@
             </div>
 
             <div class="mt-4">
-              <button type="submit" class="btn btn-success">
-                <i class="bi bi-plus-circle me-2"></i>Add Crop
-              </button>
+              {{ form.submit(class="btn btn-success") }}
               <a
                 href="{{ url_for('crop_inventory') }}"
                 class="btn btn-secondary"
@@ -184,58 +227,64 @@
     const errorDiv = document.getElementById("imageError");
     const infoDiv = document.getElementById("imageInfo");
     const maxSize = 5 * 1024 * 1024; // 5MB
-    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+    const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/gif"];
 
     // Reset states
-    errorDiv.style.display = 'none';
-    input.classList.remove('is-invalid');
-    preview.classList.add('d-none');
-    infoDiv.textContent = '';
+    errorDiv.style.display = "none";
+    input.classList.remove("is-invalid");
+    preview.classList.add("d-none");
+    infoDiv.textContent = "";
 
     if (input.files && input.files[0]) {
       const file = input.files[0];
 
       // Validate file size
       if (file.size > maxSize) {
-        input.classList.add('is-invalid');
-        errorDiv.textContent = `File size (${(file.size / (1024 * 1024)).toFixed(2)}MB) exceeds 5MB limit`;
-        errorDiv.style.display = 'block';
-        input.value = '';
+        input.classList.add("is-invalid");
+        errorDiv.textContent = `File size (${(
+          file.size /
+          (1024 * 1024)
+        ).toFixed(2)}MB) exceeds 5MB limit`;
+        errorDiv.style.display = "block";
+        input.value = "";
         return;
       }
 
       // Validate file type
       if (!allowedTypes.includes(file.type)) {
-        input.classList.add('is-invalid');
+        input.classList.add("is-invalid");
         errorDiv.textContent = `Invalid file type: ${file.type}. Please upload a JPG, JPEG, PNG, or GIF image.`;
-        errorDiv.style.display = 'block';
-        input.value = '';
+        errorDiv.style.display = "block";
+        input.value = "";
         return;
       }
 
       // Create object URL for preview
       const reader = new FileReader();
-      reader.onload = function(e) {
+      reader.onload = function (e) {
         // Create a new image to check dimensions
         const img = new Image();
-        img.onload = function() {
+        img.onload = function () {
           previewImg.src = e.target.result;
-          preview.classList.remove('d-none');
-          infoDiv.textContent = `Size: ${(file.size / 1024).toFixed(2)}KB | Dimensions: ${img.width}x${img.height}px`;
+          preview.classList.remove("d-none");
+          infoDiv.textContent = `Size: ${(file.size / 1024).toFixed(
+            2
+          )}KB | Dimensions: ${img.width}x${img.height}px`;
         };
-        img.onerror = function() {
-          input.classList.add('is-invalid');
-          errorDiv.textContent = 'Failed to load image. The file might be corrupted.';
-          errorDiv.style.display = 'block';
-          input.value = '';
+        img.onerror = function () {
+          input.classList.add("is-invalid");
+          errorDiv.textContent =
+            "Failed to load image. The file might be corrupted.";
+          errorDiv.style.display = "block";
+          input.value = "";
         };
         img.src = e.target.result;
       };
-      reader.onerror = function() {
-        input.classList.add('is-invalid');
-        errorDiv.textContent = 'Error reading the file. Please try again.';
-        errorDiv.style.display = 'block';
-        input.value = '';
+      reader.onerror = function () {
+        input.classList.add("is-invalid");
+        errorDiv.textContent = "Error reading the file. Please try again.";
+        errorDiv.style.display = "block";
+        input.value = "";
       };
       reader.readAsDataURL(file);
     }
@@ -246,20 +295,18 @@
     const preview = document.getElementById("imagePreview");
     const previewImg = preview.querySelector("img");
     const infoDiv = document.getElementById("imageInfo");
-    
-    input.value = '';
-    previewImg.src = '';
-    preview.classList.add('d-none');
-    infoDiv.textContent = '';
+
+    input.value = "";
+    previewImg.src = "";
+    preview.classList.add("d-none");
+    infoDiv.textContent = "";
   }
 
-  // Update price unit when unit changes
-  document
-    .querySelector('select[name="unit"]')
-    .addEventListener("change", function (e) {
-      const unitSpan = document.querySelector(".input-group-text:last-child");
-      unitSpan.textContent = "/" + e.target.value;
-    });
+  // Update price per unit suffix when unit changes
+  document.querySelector("#unit").addEventListener("change", function () {
+    const unitSuffix = document.querySelector(".input-group-text:last-child");
+    unitSuffix.textContent = "/" + this.value;
+  });
 
   // Set min date for expected harvest date based on planting date
   document

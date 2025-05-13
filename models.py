@@ -69,21 +69,6 @@ class Inventory(db.Model):
     # Relationships
     farmer = db.relationship('User', backref=db.backref('inventory_items', lazy=True))
 
-class CropForm(FlaskForm):
-    name = StringField('Crop Name', validators=[DataRequired()])
-    variety = StringField('Variety', validators=[Optional()])
-    planting_season = SelectField('Planting Season', choices=[
-        ('spring', 'Spring'),
-        ('summer', 'Summer'),
-        ('fall', 'Fall'), 
-        ('winter', 'Winter')
-    ], validators=[DataRequired()])
-    harvest_period = StringField('Harvest Period (days)', validators=[Optional()])
-    yield_per_acre = FloatField('Yield per Acre', validators=[Optional()])
-    price_per_unit = FloatField('Price per Unit', validators=[Optional()])
-    description = TextAreaField('Description', validators=[Optional()])
-    image = FileField('Crop Image', validators=[Optional()])
-
 class Product(db.Model):
     __tablename__ = 'products'
     id = db.Column(db.Integer, primary_key=True)
@@ -108,10 +93,10 @@ class Order(db.Model):
     __tablename__ = 'orders'
     id = db.Column(db.Integer, primary_key=True)
     farmer_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    retailer_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    distributor_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)  # Can be null initially
-    parent_order_id = db.Column(db.Integer, db.ForeignKey('orders.id'), nullable=True)  # For linking farmer orders to main order
-    status = db.Column(db.String(20), default='pending')  # pending, processing, completed, cancelled
+    retailer_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)  # Changed to nullable
+    distributor_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    parent_order_id = db.Column(db.Integer, db.ForeignKey('orders.id'), nullable=True)
+    status = db.Column(db.String(20), default='pending')
     total_amount = db.Column(db.Float, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     completed_at = db.Column(db.DateTime)

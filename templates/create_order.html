@@ -1,5 +1,5 @@
-{% extends "base.html" %} {% block title %}Create Order{% endblock %} {% block
-content %}
+{% extends "base.html" %} {% block title %}Create Order - Agri-SCM{% endblock %}
+{% block content %}
 <div class="container py-4">
   <nav aria-label="breadcrumb" class="mb-4">
     <ol class="breadcrumb">
@@ -13,11 +13,11 @@ content %}
   <div class="row justify-content-center">
     <div class="col-md-8">
       <div class="card shadow">
-        <div class="card-header bg-success text-white">
+        <div class="card-header bg-primary text-white">
           <h3 class="mb-0">Create New Order</h3>
         </div>
         <div class="card-body">
-          <form method="POST" id="orderForm">
+          <form method="POST">
             {{ form.hidden_tag() }}
 
             <div class="mb-3">
@@ -32,8 +32,8 @@ content %}
             <div class="mb-3">
               {{ form.product_id.label(class="form-label") }} {{
               form.product_id(class="form-select" + (" is-invalid" if
-              form.product_id.errors else ""), onchange="updatePrice()") }} {%
-              for error in form.product_id.errors %}
+              form.product_id.errors else "")) }} {% for error in
+              form.product_id.errors %}
               <div class="invalid-feedback">{{ error }}</div>
               {% endfor %}
             </div>
@@ -41,34 +41,29 @@ content %}
             <div class="mb-3">
               {{ form.quantity.label(class="form-label") }} {{
               form.quantity(class="form-control" + (" is-invalid" if
-              form.quantity.errors else ""), type="number", min="0.1",
-              step="0.1", onchange="updateTotal()", onkeyup="updateTotal()") }}
-              {% for error in form.quantity.errors %}
+              form.quantity.errors else ""), type="number", step="0.1",
+              min="0.1") }} {% for error in form.quantity.errors %}
               <div class="invalid-feedback">{{ error }}</div>
               {% endfor %}
             </div>
 
-            <div class="card mb-3">
-              <div class="card-body">
-                <h5 class="card-title">Order Summary</h5>
-                <div class="d-flex justify-content-between mb-2">
-                  <span>Price per unit:</span>
-                  <span id="pricePerUnit">R0.00</span>
-                </div>
-                <div class="d-flex justify-content-between mb-2">
-                  <span>Quantity:</span>
-                  <span id="quantityDisplay">0</span>
-                </div>
-                <hr />
-                <div class="d-flex justify-content-between">
-                  <strong>Total Amount:</strong>
-                  <strong id="totalAmount">R0.00</strong>
-                </div>
-              </div>
+            <div class="mb-3">
+              {{ form.notes.label(class="form-label") }} {{
+              form.notes(class="form-control" + (" is-invalid" if
+              form.notes.errors else ""), rows="3", placeholder="Add any special
+              instructions or notes for this order") }} {% for error in
+              form.notes.errors %}
+              <div class="invalid-feedback">{{ error }}</div>
+              {% endfor %}
             </div>
 
-            <div class="d-grid">
-              {{ form.submit(class="btn btn-success btn-lg") }}
+            <div class="d-grid gap-2">
+              {{ form.submit(class="btn btn-primary") }}
+              <a
+                href="{{ url_for('distributor_dashboard') }}"
+                class="btn btn-secondary"
+                >Cancel</a
+              >
             </div>
           </form>
         </div>
@@ -76,43 +71,4 @@ content %}
     </div>
   </div>
 </div>
-{% endblock %} {% block scripts %}
-<script>
-  const products = {
-      {% for choice in form.product_id.choices %}
-          {{ choice[0] }}: {
-              price: {{ choice[1].split('($')[1].split('/')[0] }},
-              unit: '{{ choice[1].split('/')[1].rstrip(')') }}'
-          },
-      {% endfor %}
-  };
-
-  function updatePrice() {
-      const productSelect = document.getElementById('product_id');
-      const selectedProduct = products[productSelect.value];
-      if (selectedProduct) {
-          document.getElementById('pricePerUnit').textContent = `R${selectedProduct.price.toFixed(2)}`;
-          updateTotal();
-      }
-  }
-
-  function updateTotal() {
-      const productSelect = document.getElementById('product_id');
-      const quantityInput = document.getElementById('quantity');
-      const selectedProduct = products[productSelect.value];
-
-      if (selectedProduct && quantityInput.value) {
-          const quantity = parseFloat(quantityInput.value);
-          const total = quantity * selectedProduct.price;
-          document.getElementById('quantityDisplay').textContent = `${quantity} ${selectedProduct.unit}`;
-          document.getElementById('totalAmount').textContent = `R${total.toFixed(2)}`;
-      }
-  }
-
-  // Initialize on page load
-  document.addEventListener('DOMContentLoaded', function() {
-      updatePrice();
-      updateTotal();
-  });
-</script>
 {% endblock %}

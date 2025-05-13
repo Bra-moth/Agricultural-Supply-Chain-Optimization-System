@@ -546,6 +546,7 @@ def add_crop():
                     flash('Error processing image upload. Please try again.', 'danger')
                     return render_template('add_crop.html', form=form)
             
+            # Create new crop
             crop = Crop(
                 farmer_id=current_user.id,
                 name=form.name.data,
@@ -559,7 +560,8 @@ def add_crop():
                 image=image_filename,
                 planting_season=form.planting_season.data,
                 harvest_period=form.harvest_period.data,
-                yield_per_acre=form.yield_per_acre.data
+                yield_per_acre=form.yield_per_acre.data,
+                status='growing'  # Set initial status
             )
             
             db.session.add(crop)
@@ -571,7 +573,14 @@ def add_crop():
             db.session.rollback()
             app.logger.error(f"Error adding crop: {str(e)}")
             flash('An error occurred while adding the crop. Please try again.', 'danger')
-            
+            return render_template('add_crop.html', form=form)
+    
+    # If form validation failed, show errors
+    if form.errors:
+        for field, errors in form.errors.items():
+            for error in errors:
+                flash(f'{field}: {error}', 'danger')
+    
     return render_template('add_crop.html', form=form)
 
 @app.route('/edit_crop/<int:crop_id>', methods=['GET', 'POST'])
@@ -767,10 +776,10 @@ def create_order():
             new_order = Order(
                 farmer_id=form.farmer_id.data,
                 distributor_id=current_user.id,
-                retailer_id=None,  # This will be set when a retailer claims the order
                 status='pending',
                 total_amount=total_amount,
-                created_at=datetime.now()
+                created_at=datetime.now(),
+                notes=form.notes.data
             )
             db.session.add(new_order)
             db.session.flush()  # This gets us the order ID
@@ -1104,36 +1113,119 @@ def inventory_management():
 @role_required('distributor')
 def add_inventory_item():
     try:
+        # Validate CSRF token
+        csrf_token = request.headers.get('X-CSRF-TOKEN')
+        if not csrf_token:
+            return jsonify({
+                'success': False,
+                'message': 'CSRF token missing'
+            }), 400
+
+        # Validate required fields
+        required_fields = ['name', 'category', 'quantity', 'unit', 'min_quantity', 'price_per_unit']
+        for field in required_fields:
+            if field not in request.form or not request.form[field].strip():
+                return jsonify({
+                    'success': False,
+                    'message': f'Missing required field: {field}'
+                }), 400
+
         # Handle image upload
         image_filename = None
         if 'image' in request.files:
             image = request.files['image']
             if image.filename:
-                image_filename = secure_filename(f"{current_user.id}_{int(time.time())}_{image.filename}")
-                image.save(os.path.join(app.config['UPLOAD_FOLDER'], image_filename))
+                # Validate image file
+                if not image.filename.lower().endswith(('.png', '.jpg', '.jpeg', '.gif')):
+                    return jsonify({
+                        'success': False,
+                        'message': 'Invalid image format. Allowed formats: PNG, JPG, JPEG, GIF'
+                    }), 400
+
+                # Create a secure filename
+                image_filename = secure_filename(f"{request.form['name'].lower().replace(' ', '_')}_{current_user.id}_{int(time.time())}{os.path.splitext(image.filename)[1]}")
+                
+                try:
+                    # Ensure upload directory exists
+                    upload_folder = os.path.join(app.static_folder, 'uploads')
+                    os.makedirs(upload_folder, exist_ok=True)
+                    
+                    # Save the image
+                    image_path = os.path.join(upload_folder, image_filename)
+                    image.save(image_path)
+                    
+                    # Validate the saved image
+                    try:
+                        with Image.open(image_path) as img:
+                            img.verify()
+                    except Exception:
+                        os.remove(image_path)
+                        return jsonify({
+                            'success': False,
+                            'message': 'Invalid image file'
+                        }), 400
+                        
+                except Exception as e:
+                    app.logger.error(f"Error saving image: {str(e)}")
+                    return jsonify({
+                        'success': False,
+                        'message': 'Failed to save image file'
+                    }), 500
+
+        # Validate numeric fields
+        try:
+            quantity = float(request.form['quantity'])
+            min_quantity = float(request.form['min_quantity'])
+            price_per_unit = float(request.form['price_per_unit'])
+
+            if quantity < 0 or min_quantity < 0 or price_per_unit < 0:
+                return jsonify({
+                    'success': False,
+                    'message': 'Quantity, minimum quantity, and price must be positive numbers'
+                }), 400
+
+        except ValueError:
+            return jsonify({
+                'success': False,
+                'message': 'Invalid numeric values provided'
+            }), 400
 
         # Create new inventory item
         new_item = InventoryItem(
             distributor_id=current_user.id,
-            name=request.form['name'],
-            category=request.form['category'],
-            quantity=float(request.form['quantity']),
-            unit=request.form['unit'],
-            min_quantity=float(request.form['min_quantity']),
-            price_per_unit=float(request.form['price_per_unit']),
-            description=request.form.get('description', ''),
+            name=request.form['name'].strip(),
+            category=request.form['category'].strip(),
+            quantity=quantity,
+            unit=request.form['unit'].strip(),
+            min_quantity=min_quantity,
+            price_per_unit=price_per_unit,
+            description=request.form.get('description', '').strip(),
             image=image_filename
         )
         
         db.session.add(new_item)
         db.session.commit()
         
-        return jsonify({'success': True})
+        return jsonify({
+            'success': True,
+            'message': 'Product added successfully'
+        })
         
     except Exception as e:
         db.session.rollback()
+        # Clean up image if it was saved
+        if image_filename:
+            try:
+                image_path = os.path.join(app.static_folder, 'uploads', image_filename)
+                if os.path.exists(image_path):
+                    os.remove(image_path)
+            except:
+                pass
         app.logger.error(f"Error adding inventory item: {str(e)}")
-        return jsonify({'success': False, 'message': 'Server error'}), 500
+        return jsonify({
+            'success': False,
+            'message': 'An error occurred while adding the product. Please try again.'
+        }), 500
 
 @app.route('/api/inventory/<int:item_id>', methods=['GET'])
 @login_required

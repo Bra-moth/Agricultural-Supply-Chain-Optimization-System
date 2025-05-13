@@ -158,14 +158,29 @@ endblock %} {% block content %}
         ></button>
       </div>
       <div class="modal-body">
-        <form id="addProductForm" enctype="multipart/form-data">
+        <form id="addProductForm" enctype="multipart/form-data" novalidate>
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
           <div class="row g-3">
             <div class="col-md-6">
-              <label class="form-label">Product Name</label>
-              <input type="text" class="form-control" name="name" required />
+              <label class="form-label"
+                >Product Name <span class="text-danger">*</span></label
+              >
+              <input
+                type="text"
+                class="form-control"
+                name="name"
+                required
+                minlength="2"
+                maxlength="100"
+              />
+              <div class="invalid-feedback">
+                Please enter a product name (2-100 characters)
+              </div>
             </div>
             <div class="col-md-6">
-              <label class="form-label">Category</label>
+              <label class="form-label"
+                >Category <span class="text-danger">*</span></label
+              >
               <select class="form-select" name="category" required>
                 <option value="">Select Category</option>
                 <option value="Grains">Grains</option>
@@ -174,9 +189,12 @@ endblock %} {% block content %}
                 <option value="Dairy">Dairy</option>
                 <option value="Meat">Meat</option>
               </select>
+              <div class="invalid-feedback">Please select a category</div>
             </div>
             <div class="col-md-4">
-              <label class="form-label">Quantity</label>
+              <label class="form-label"
+                >Quantity <span class="text-danger">*</span></label
+              >
               <input
                 type="number"
                 class="form-control"
@@ -185,19 +203,28 @@ endblock %} {% block content %}
                 min="0"
                 step="0.01"
               />
+              <div class="invalid-feedback">
+                Please enter a valid quantity (must be positive)
+              </div>
             </div>
             <div class="col-md-4">
-              <label class="form-label">Unit</label>
+              <label class="form-label"
+                >Unit <span class="text-danger">*</span></label
+              >
               <select class="form-select" name="unit" required>
+                <option value="">Select Unit</option>
                 <option value="kg">Kilogram (kg)</option>
                 <option value="g">Gram (g)</option>
                 <option value="l">Liter (l)</option>
                 <option value="ml">Milliliter (ml)</option>
                 <option value="pcs">Pieces (pcs)</option>
               </select>
+              <div class="invalid-feedback">Please select a unit</div>
             </div>
             <div class="col-md-4">
-              <label class="form-label">Minimum Quantity</label>
+              <label class="form-label"
+                >Minimum Quantity <span class="text-danger">*</span></label
+              >
               <input
                 type="number"
                 class="form-control"
@@ -206,9 +233,14 @@ endblock %} {% block content %}
                 min="0"
                 step="0.01"
               />
+              <div class="invalid-feedback">
+                Please enter a valid minimum quantity (must be positive)
+              </div>
             </div>
             <div class="col-md-6">
-              <label class="form-label">Price per Unit</label>
+              <label class="form-label"
+                >Price per Unit <span class="text-danger">*</span></label
+              >
               <div class="input-group">
                 <span class="input-group-text">R</span>
                 <input
@@ -219,6 +251,9 @@ endblock %} {% block content %}
                   min="0"
                   step="0.01"
                 />
+                <div class="invalid-feedback">
+                  Please enter a valid price (must be positive)
+                </div>
               </div>
             </div>
             <div class="col-md-6">
@@ -229,6 +264,9 @@ endblock %} {% block content %}
                 name="image"
                 accept="image/*"
               />
+              <div class="invalid-feedback">
+                Please select a valid image file
+              </div>
             </div>
             <div class="col-12">
               <label class="form-label">Description</label>
@@ -236,7 +274,9 @@ endblock %} {% block content %}
                 class="form-control"
                 name="description"
                 rows="3"
+                maxlength="500"
               ></textarea>
+              <div class="form-text">Maximum 500 characters</div>
             </div>
           </div>
         </form>
@@ -353,25 +393,112 @@ endblock %} {% block content %}
     });
   }
 
+  function validateForm(form) {
+    const inputs = form.querySelectorAll("input, select, textarea");
+    let isValid = true;
+
+    inputs.forEach((input) => {
+      input.classList.remove("is-invalid");
+      if (input.hasAttribute("required") && !input.value.trim()) {
+        input.classList.add("is-invalid");
+        isValid = false;
+      } else if (input.type === "number") {
+        const value = parseFloat(input.value);
+        if (isNaN(value) || value < 0) {
+          input.classList.add("is-invalid");
+          isValid = false;
+        }
+      } else if (input.type === "file" && input.files.length > 0) {
+        const file = input.files[0];
+        if (!file.type.startsWith("image/")) {
+          input.classList.add("is-invalid");
+          isValid = false;
+        }
+      }
+    });
+
+    return isValid;
+  }
+
   function submitProduct() {
     const form = document.getElementById("addProductForm");
+
+    // Clear previous error messages
+    const errorMessages = document.querySelectorAll(".alert");
+    errorMessages.forEach((el) => el.remove());
+
+    // Validate form
+    if (!validateForm(form)) {
+      const errorAlert = document.createElement("div");
+      errorAlert.className = "alert alert-danger mt-3";
+      errorAlert.textContent = "Please fill in all required fields correctly.";
+      form.insertBefore(errorAlert, form.firstChild);
+      return;
+    }
+
     const formData = new FormData(form);
+
+    // Show loading state
+    const submitBtn = document.querySelector("#addProductModal .btn-primary");
+    const originalText = submitBtn.innerHTML;
+    submitBtn.innerHTML =
+      '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Adding...';
+    submitBtn.disabled = true;
 
     fetch("/api/inventory/add", {
       method: "POST",
       body: formData,
+      headers: {
+        "X-CSRF-TOKEN": formData.get("csrf_token"),
+      },
     })
-      .then((response) => response.json())
-      .then((data) => {
-        if (data.success) {
-          location.reload();
-        } else {
-          alert(data.message || "Failed to add product");
+      .then(async (response) => {
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.message || "Failed to add product");
         }
+        return data;
+      })
+      .then((data) => {
+        // Show success message
+        const successAlert = document.createElement("div");
+        successAlert.className = "alert alert-success mt-3";
+        successAlert.textContent = data.message || "Product added successfully";
+        form.insertBefore(successAlert, form.firstChild);
+
+        // Reset form
+        form.reset();
+
+        // Reload page after a short delay
+        setTimeout(() => {
+          window.location.reload();
+        }, 1500);
       })
       .catch((error) => {
         console.error("Error:", error);
-        alert("An error occurred while adding the product");
+        const errorAlert = document.createElement("div");
+        errorAlert.className = "alert alert-danger mt-3";
+        errorAlert.textContent =
+          error.message ||
+          "An error occurred while adding the product. Please try again.";
+        form.insertBefore(errorAlert, form.firstChild);
+
+        // If it's a field-specific error, highlight the field
+        if (
+          error.message &&
+          error.message.includes("Missing required field:")
+        ) {
+          const field = error.message.split(":")[1].trim();
+          const input = form.querySelector(`[name="${field}"]`);
+          if (input) {
+            input.classList.add("is-invalid");
+          }
+        }
+      })
+      .finally(() => {
+        // Reset button state
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
       });
   }
 

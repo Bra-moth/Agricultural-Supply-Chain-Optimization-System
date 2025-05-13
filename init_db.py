@@ -135,30 +135,32 @@ def add_sample_data():
         print("📦 Added sample products")
 
         # Create sample orders
-        orders = [
-            Order(
-                farmer_id=users[0].id,
-                retailer_id=users[2].id,
-                distributor_id=users[1].id,
-                status="completed",
-                total_amount=100.00,
-                created_at=datetime.utcnow() - timedelta(days=10),
-                completed_at=datetime.utcnow() - timedelta(days=5),
-                notes="First order completed successfully"
-            ),
-            Order(
-                farmer_id=users[0].id,
-                retailer_id=users[2].id,
-                distributor_id=users[1].id,
-                status="pending",
-                total_amount=120.00,
-                created_at=datetime.utcnow() - timedelta(days=2),
-                notes="Second order pending"
-            )
-        ]
-        db.session.add_all(orders)
+        main_order = Order(
+            farmer_id=users[0].id,
+            retailer_id=users[2].id,
+            distributor_id=users[1].id,
+            status="pending",
+            total_amount=100.00,
+            created_at=datetime.utcnow(),
+            notes="Main order"
+        )
+        db.session.add(main_order)
+        db.session.flush()  # Get the main order ID
+
+        # Create child orders linked to the main order
+        child_order = Order(
+            farmer_id=users[0].id,
+            retailer_id=users[2].id,
+            distributor_id=users[1].id,
+            parent_order_id=main_order.id,
+            status="pending",
+            total_amount=50.00,
+            created_at=datetime.utcnow(),
+            notes="Child order"
+        )
+        db.session.add(child_order)
         db.session.commit()
-        print("📋 Added sample orders")
+        print("📋 Added sample orders with parent-child relationship")
 
         # Create sample suppliers
         suppliers = [

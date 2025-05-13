@@ -151,20 +151,50 @@ endblock %} {% block content %}
               <!-- Image Upload -->
               <div class="col-12">
                 <div class="form-group">
-                  {{ form.image.label(class="form-label") }} {% if crop.image %}
-                  <div class="mb-2">
-                    <img
-                      src="{{ crop.image_url }}"
-                      alt="{{ crop.name }}"
-                      class="img-thumbnail"
-                      style="max-height: 200px"
-                    />
+                  {{ form.image.label(class="form-label") }}
+                  {% if crop.image %}
+                  <div class="mb-3">
+                    <div class="position-relative">
+                      <img src="{{ crop.image_url }}"
+                           alt="{{ crop.name }}"
+                           class="img-thumbnail"
+                           style="max-height: 200px"
+                           onerror="this.onerror=null; this.src='{{ url_for('static', filename='images/default-crop.jpg') }}'; this.style.opacity=0.7;"
+                      />
+                      <div class="position-absolute top-0 end-0 m-2">
+                        <button type="button" class="btn btn-sm btn-danger" onclick="removeExistingImage()">
+                          <i class="bi bi-x-lg"></i>
+                        </button>
+                      </div>
+                    </div>
+                    <div class="mt-2 text-muted small" id="currentImageInfo"></div>
                   </div>
-                  {% endif %} {{ form.image(class="form-control" + ("
-                  is-invalid" if form.image.errors else "")) }} {% for error in
-                  form.image.errors %}
+                  {% endif %}
+                  <div class="input-group">
+                    {{ form.image(class="form-control" + (" is-invalid" if form.image.errors else ""),
+                                 accept="image/*",
+                                 onchange="validateAndPreviewImage(this)") }}
+                  </div>
+                  <div class="form-text">
+                    Supported formats: JPG, JPEG, PNG, GIF. Max file size: 5MB
+                  </div>
+                  {% for error in form.image.errors %}
                   <div class="invalid-feedback">{{ error }}</div>
                   {% endfor %}
+                  <div id="imagePreview" class="mt-2 d-none">
+                    <div class="position-relative">
+                      <img src="" alt="New image preview" class="img-fluid rounded" style="max-height: 200px"/>
+                      <div class="position-absolute top-0 end-0 m-2">
+                        <button type="button" class="btn btn-sm btn-danger" onclick="clearImagePreview()">
+                          <i class="bi bi-x-lg"></i>
+                        </button>
+                      </div>
+                    </div>
+                    <div class="mt-2 text-muted small">
+                      <span id="imageInfo"></span>
+                    </div>
+                  </div>
+                  <div id="imageError" class="invalid-feedback"></div>
                 </div>
               </div>
             </div>
@@ -203,6 +233,106 @@ endblock %} {% block content %}
 
     // Set the unit
     document.querySelector("#unit").value = "{{ crop.unit }}";
+    
+    // Get current image info if it exists
+    {% if crop.image %}
+    const img = document.querySelector('img[src="{{ crop.image_url }}"]');
+    img.onload = function() {
+      document.getElementById('currentImageInfo').textContent = 
+        `Dimensions: ${this.naturalWidth}x${this.naturalHeight}px`;
+    };
+    {% endif %}
   });
+
+  function validateAndPreviewImage(input) {
+    const preview = document.getElementById("imagePreview");
+    const previewImg = preview.querySelector("img");
+    const errorDiv = document.getElementById("imageError");
+    const infoDiv = document.getElementById("imageInfo");
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+
+    // Reset states
+    errorDiv.style.display = 'none';
+    input.classList.remove('is-invalid');
+    preview.classList.add('d-none');
+    infoDiv.textContent = '';
+
+    if (input.files && input.files[0]) {
+      const file = input.files[0];
+
+      // Validate file size
+      if (file.size > maxSize) {
+        input.classList.add('is-invalid');
+        errorDiv.textContent = `File size (${(file.size / (1024 * 1024)).toFixed(2)}MB) exceeds 5MB limit`;
+        errorDiv.style.display = 'block';
+        input.value = '';
+        return;
+      }
+
+      // Validate file type
+      if (!allowedTypes.includes(file.type)) {
+        input.classList.add('is-invalid');
+        errorDiv.textContent = `Invalid file type: ${file.type}. Please upload a JPG, JPEG, PNG, or GIF image.`;
+        errorDiv.style.display = 'block';
+        input.value = '';
+        return;
+      }
+
+      // Create object URL for preview
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        // Create a new image to check dimensions
+        const img = new Image();
+        img.onload = function() {
+          previewImg.src = e.target.result;
+          preview.classList.remove('d-none');
+          infoDiv.textContent = `Size: ${(file.size / 1024).toFixed(2)}KB | Dimensions: ${img.width}x${img.height}px`;
+        };
+        img.onerror = function() {
+          input.classList.add('is-invalid');
+          errorDiv.textContent = 'Failed to load image. The file might be corrupted.';
+          errorDiv.style.display = 'block';
+          input.value = '';
+        };
+        img.src = e.target.result;
+      };
+      reader.onerror = function() {
+        input.classList.add('is-invalid');
+        errorDiv.textContent = 'Error reading the file. Please try again.';
+        errorDiv.style.display = 'block';
+        input.value = '';
+      };
+      reader.readAsDataURL(file);
+    }
+  }
+
+  function clearImagePreview() {
+    const input = document.querySelector('input[type="file"]');
+    const preview = document.getElementById("imagePreview");
+    const previewImg = preview.querySelector("img");
+    const infoDiv = document.getElementById("imageInfo");
+    
+    input.value = '';
+    previewImg.src = '';
+    preview.classList.add('d-none');
+    infoDiv.textContent = '';
+  }
+
+  function removeExistingImage() {
+    if (confirm('Are you sure you want to remove the current image? This action cannot be undone.')) {
+      // Hide current image container
+      const currentImage = document.querySelector('img[src="{{ crop.image_url }}"]').closest('.mb-3');
+      currentImage.style.display = 'none';
+      
+      // Add a hidden input to signal image removal
+      const form = document.querySelector('form');
+      const hiddenInput = document.createElement('input');
+      hiddenInput.type = 'hidden';
+      hiddenInput.name = 'remove_image';
+      hiddenInput.value = 'true';
+      form.appendChild(hiddenInput);
+    }
+  }
 </script>
 {% endblock %}

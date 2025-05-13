@@ -1,130 +1,179 @@
-{% extends "base.html" %} {% block title %}Order #{{ order.id }} Details -
-Agri-SCM{% endblock %} {% block content %}
+{% extends "base.html" %} {% block title %}Order Details{% endblock %} {% block
+content %}
 <div class="container py-4">
-  <div class="row">
-    <div class="col-12">
-      <nav aria-label="breadcrumb">
-        <ol class="breadcrumb">
-          <li class="breadcrumb-item">
-            <a href="{{ url_for(user.role + '_dashboard') }}">Dashboard</a>
-          </li>
-          <li class="breadcrumb-item active" aria-current="page">
-            Order #{{ order.id }}
-          </li>
-        </ol>
-      </nav>
-    </div>
-  </div>
+  <nav aria-label="breadcrumb" class="mb-4">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item">
+        <a href="{{ url_for('orders') }}">Orders</a>
+      </li>
+      <li class="breadcrumb-item active">Order #{{ order.id }}</li>
+    </ol>
+  </nav>
 
-  <div class="row g-4">
-    <!-- Order Summary -->
+  <div class="row">
+    <!-- Main Order Details -->
     <div class="col-md-8">
-      <div class="card">
-        <div
-          class="card-header d-flex justify-content-between align-items-center"
-        >
-          <h5 class="mb-0">Order Summary</h5>
-          <span class="badge bg-{{ order.status_color }}"
-            >{{ order.status }}</span
-          >
+      <div class="card mb-4">
+        <div class="card-header">
+          <h5 class="mb-0">Order Details</h5>
         </div>
         <div class="card-body">
           <div class="row mb-4">
-            <div class="col-md-6">
-              <h6 class="text-muted">Order Information</h6>
-              <p class="mb-1"><strong>Order ID:</strong> #{{ order.id }}</p>
-              <p class="mb-1">
-                <strong>Date:</strong> {{ order.created_at.strftime('%Y-%m-%d
-                %H:%M') }}
-              </p>
-              <p class="mb-1">
+            <div class="col-sm-6">
+              <h6 class="mb-3">Order Information</h6>
+              <div><strong>Order ID:</strong> #{{ order.id }}</div>
+              <div>
                 <strong>Status:</strong>
                 <span class="badge bg-{{ order.status_color }}"
                   >{{ order.status }}</span
                 >
-              </p>
-              {% if order.completed_at %}
-              <p class="mb-1">
-                <strong>Completed:</strong> {{
-                order.completed_at.strftime('%Y-%m-%d %H:%M') }}
-              </p>
-              {% endif %}
+              </div>
+              <div>
+                <strong>Date:</strong> {{ order.created_at.strftime('%Y-%m-%d
+                %H:%M') }}
+              </div>
+              <div>
+                <strong>Total Amount:</strong> R{{
+                "%.2f"|format(order.total_amount) }}
+              </div>
             </div>
-            <div class="col-md-6">
-              <h6 class="text-muted">Delivery Information</h6>
-              {% if order.deliveries %} {% set delivery = order.deliveries[0] %}
-              <p class="mb-1">
-                <strong>Status:</strong>
-                <span class="badge bg-{{ delivery.status_color }}"
-                  >{{ delivery.status }}</span
-                >
-              </p>
-              <p class="mb-1">
-                <strong>Scheduled:</strong> {{
-                delivery.scheduled_date.strftime('%Y-%m-%d %H:%M') }}
-              </p>
-              <p class="mb-1">
-                <strong>Tracking:</strong> {{ delivery.tracking_number }}
-              </p>
-              <p class="mb-1">
-                <strong>Address:</strong> {{ delivery.delivery_address }}
-              </p>
-              {% else %}
-              <p class="text-muted">No delivery information available</p>
+            <div class="col-sm-6">
+              <h6 class="mb-3">Participants</h6>
+              <div>
+                <strong>Retailer:</strong> {{ order.retailer.username }}
+              </div>
+              <div>
+                <strong>Distributor:</strong> {{ order.distributor.username if
+                order.distributor else 'Not Assigned' }}
+              </div>
+              {% if order.farmer %}
+              <div><strong>Farmer:</strong> {{ order.farmer.username }}</div>
               {% endif %}
             </div>
           </div>
 
-          <h6 class="text-muted mb-3">Order Items</h6>
+          <!-- Order Items -->
+          <h6 class="mb-3">Order Items</h6>
           <div class="table-responsive">
             <table class="table table-hover">
               <thead>
                 <tr>
-                  <th>Product</th>
-                  <th>Unit Price</th>
+                  <th>Item</th>
                   <th>Quantity</th>
-                  <th class="text-end">Subtotal</th>
+                  <th>Price/Unit</th>
+                  <th>Subtotal</th>
                 </tr>
               </thead>
               <tbody>
                 {% for item in order.items %}
                 <tr>
+                  <td>{{ item.item_name }}</td>
                   <td>
-                    <div class="d-flex align-items-center">
-                      {% if item.product.image %}
-                      <img
-                        src="{{ url_for('static', filename='uploads/' + item.product.image) }}"
-                        alt="{{ item.product.name }}"
-                        class="rounded me-2"
-                        style="width: 40px; height: 40px; object-fit: cover"
-                      />
-                      {% endif %}
-                      <div>
-                        <h6 class="mb-0">{{ item.product.name }}</h6>
-                        <small class="text-muted"
-                          >{{ item.product.variety }}</small
-                        >
-                      </div>
-                    </div>
+                    {{ item.quantity }} {{ item.unit if item.unit else 'units'
+                    }}
                   </td>
-                  <td>R{{ item.price_per_unit|round(2) }}</td>
-                  <td>{{ item.quantity }}</td>
-                  <td class="text-end">R{{ item.subtotal|round(2) }}</td>
+                  <td>R{{ "%.2f"|format(item.price_per_unit) }}</td>
+                  <td>R{{ "%.2f"|format(item.total_amount) }}</td>
                 </tr>
                 {% endfor %}
               </tbody>
               <tfoot>
                 <tr>
                   <td colspan="3" class="text-end"><strong>Total:</strong></td>
-                  <td class="text-end">
-                    <strong>R{{ order.total_amount|round(2) }}</strong>
+                  <td>
+                    <strong>R{{ "%.2f"|format(order.total_amount) }}</strong>
                   </td>
                 </tr>
               </tfoot>
             </table>
           </div>
+
+          {% if order.notes %}
+          <div class="mt-4">
+            <h6 class="mb-2">Order Notes</h6>
+            <p class="mb-0">{{ order.notes }}</p>
+          </div>
+          {% endif %}
         </div>
       </div>
+
+      <!-- Linked Farmer Orders -->
+      {% if order.child_orders %}
+      <div class="card mb-4">
+        <div class="card-header">
+          <h5 class="mb-0">Farmer Orders</h5>
+        </div>
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table table-hover">
+              <thead>
+                <tr>
+                  <th>Order ID</th>
+                  <th>Farmer</th>
+                  <th>Items</th>
+                  <th>Total</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for farmer_order in order.child_orders %}
+                <tr>
+                  <td>#{{ farmer_order.id }}</td>
+                  <td>{{ farmer_order.farmer.username }}</td>
+                  <td>{{ farmer_order.items|length }} items</td>
+                  <td>R{{ "%.2f"|format(farmer_order.total_amount) }}</td>
+                  <td>
+                    <span class="badge bg-{{ farmer_order.status_color }}"
+                      >{{ farmer_order.status }}</span
+                    >
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Delivery Information -->
+      {% if order.order_deliveries %}
+      <div class="card">
+        <div class="card-header">
+          <h5 class="mb-0">Delivery Information</h5>
+        </div>
+        <div class="card-body">
+          {% for delivery in order.order_deliveries %}
+          <div class="row">
+            <div class="col-sm-6">
+              <div>
+                <strong>Status:</strong>
+                <span class="badge bg-{{ delivery.status_color }}"
+                  >{{ delivery.status }}</span
+                >
+              </div>
+              <div>
+                <strong>Tracking Number:</strong> {{ delivery.tracking_number }}
+              </div>
+              <div>
+                <strong>Scheduled Date:</strong> {{
+                delivery.scheduled_date.strftime('%Y-%m-%d') }}
+              </div>
+            </div>
+            <div class="col-sm-6">
+              <div><strong>Delivery Address:</strong></div>
+              <p class="mb-0">{{ delivery.delivery_address }}</p>
+            </div>
+          </div>
+          {% if delivery.notes %}
+          <div class="mt-3">
+            <strong>Delivery Notes:</strong>
+            <p class="mb-0">{{ delivery.notes }}</p>
+          </div>
+          {% endif %} {% endfor %}
+        </div>
+      </div>
+      {% endif %}
     </div>
 
     <!-- Order Actions -->
@@ -134,7 +183,8 @@ Agri-SCM{% endblock %} {% block content %}
           <h5 class="mb-0">Order Actions</h5>
         </div>
         <div class="card-body">
-          {% if user.role == 'distributor' %} {% if order.status == 'pending' %}
+          {% if current_user.role == 'distributor' %} {% if order.status ==
+          'pending' %}
           <button
             class="btn btn-success w-100 mb-2"
             onclick="updateOrderStatus('processing')"
@@ -154,8 +204,8 @@ Agri-SCM{% endblock %} {% block content %}
           >
             <i class="bi bi-check2-all"></i> Mark as Completed
           </button>
-          {% endif %} {% elif user.role == 'retailer' %} {% if order.status ==
-          'pending' %}
+          {% endif %} {% elif current_user.role == 'retailer' %} {% if
+          order.status == 'pending' %}
           <button class="btn btn-danger w-100" onclick="cancelOrder()">
             <i class="bi bi-x-circle"></i> Cancel Order
           </button>
@@ -163,17 +213,17 @@ Agri-SCM{% endblock %} {% block content %}
         </div>
       </div>
 
-      {% if order.deliveries %} {% set delivery = order.deliveries[0] %}
+      <!-- Order Timeline -->
       <div class="card">
         <div class="card-header">
-          <h5 class="mb-0">Delivery Timeline</h5>
+          <h5 class="mb-0">Order Timeline</h5>
         </div>
         <div class="card-body">
           <div class="timeline">
             <div class="timeline-item">
               <div class="timeline-marker bg-success"></div>
               <div class="timeline-content">
-                <h6 class="mb-0">Order Placed</h6>
+                <h6 class="mb-0">Order Created</h6>
                 <small class="text-muted"
                   >{{ order.created_at.strftime('%Y-%m-%d %H:%M') }}</small
                 >
@@ -181,34 +231,19 @@ Agri-SCM{% endblock %} {% block content %}
             </div>
             {% if order.status != 'pending' %}
             <div class="timeline-item">
-              <div
-                class="timeline-marker {{ 'bg-success' if order.status in ['processing', 'completed'] else 'bg-secondary' }}"
-              ></div>
+              <div class="timeline-marker bg-info"></div>
               <div class="timeline-content">
-                <h6 class="mb-0">Order Processing</h6>
-                <small class="text-muted">Order accepted by distributor</small>
+                <h6 class="mb-0">Processing Started</h6>
+                <small class="text-muted">Distributor assigned</small>
               </div>
             </div>
-            {% endif %} {% if delivery.status in ['in_transit', 'completed'] %}
-            <div class="timeline-item">
-              <div
-                class="timeline-marker {{ 'bg-success' if delivery.status == 'completed' else 'bg-secondary' }}"
-              ></div>
-              <div class="timeline-content">
-                <h6 class="mb-0">Out for Delivery</h6>
-                <small class="text-muted"
-                  >{{ delivery.scheduled_date.strftime('%Y-%m-%d %H:%M')
-                  }}</small
-                >
-              </div>
-            </div>
-            {% endif %} {% if delivery.status == 'completed' %}
+            {% endif %} {% if order.status == 'completed' %}
             <div class="timeline-item">
               <div class="timeline-marker bg-success"></div>
               <div class="timeline-content">
-                <h6 class="mb-0">Delivered</h6>
+                <h6 class="mb-0">Order Completed</h6>
                 <small class="text-muted"
-                  >{{ delivery.completed_at.strftime('%Y-%m-%d %H:%M') }}</small
+                  >{{ order.completed_at.strftime('%Y-%m-%d %H:%M') }}</small
                 >
               </div>
             </div>
@@ -216,15 +251,15 @@ Agri-SCM{% endblock %} {% block content %}
           </div>
         </div>
       </div>
-      {% endif %}
     </div>
   </div>
 </div>
+
 {% endblock %} {% block styles %}
 <style>
   .timeline {
     position: relative;
-    padding-left: 30px;
+    padding-left: 1.5rem;
   }
 
   .timeline-item {
@@ -238,9 +273,9 @@ Agri-SCM{% endblock %} {% block content %}
 
   .timeline-marker {
     position: absolute;
-    left: -30px;
-    width: 15px;
-    height: 15px;
+    left: -0.75rem;
+    width: 1rem;
+    height: 1rem;
     border-radius: 50%;
   }
 
@@ -248,8 +283,8 @@ Agri-SCM{% endblock %} {% block content %}
     content: "";
     position: absolute;
     left: 50%;
-    top: 15px;
-    bottom: -30px;
+    top: 1rem;
+    bottom: -1.5rem;
     width: 2px;
     margin-left: -1px;
     background-color: #e9ecef;
@@ -258,9 +293,7 @@ Agri-SCM{% endblock %} {% block content %}
 {% endblock %} {% block scripts %}
 <script>
   function updateOrderStatus(status) {
-    if (!confirm(`Are you sure you want to ${status} this order?`)) {
-      return;
-    }
+    if (!confirm("Are you sure you want to update the order status?")) return;
 
     fetch(`/api/orders/{{ order.id }}/status`, {
       method: "PUT",
@@ -284,9 +317,7 @@ Agri-SCM{% endblock %} {% block content %}
   }
 
   function cancelOrder() {
-    if (!confirm("Are you sure you want to cancel this order?")) {
-      return;
-    }
+    if (!confirm("Are you sure you want to cancel this order?")) return;
 
     fetch(`/api/orders/{{ order.id }}/cancel`, {
       method: "POST",

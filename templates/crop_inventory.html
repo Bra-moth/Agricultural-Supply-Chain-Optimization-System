@@ -24,6 +24,7 @@ content %}
           alt="{{ crop.name }}"
           style="height: 200px; object-fit: cover"
           onclick="openImagePreview(this.src, '{{ crop.name }}')"
+          onerror="this.onerror=null; this.src='{{ url_for('static', filename='images/default-crop.jpg') }}'; this.style.opacity=0.7;"
         />
         {% else %}
         <div
@@ -136,7 +137,23 @@ content %}
         ></button>
       </div>
       <div class="modal-body text-center">
-        <img id="previewImage" src="" class="img-fluid" alt="Crop Image" />
+        <div class="position-relative">
+          <img
+            id="previewImage"
+            src=""
+            class="img-fluid"
+            alt="Crop Image"
+            onerror="this.onerror=null; this.src='{{ url_for('static', filename='images/default-crop.jpg') }}'; this.style.opacity=0.7;"
+          />
+          <div
+            id="imageLoadingSpinner"
+            class="position-absolute top-50 start-50 translate-middle d-none"
+          >
+            <div class="spinner-border text-primary" role="status">
+              <span class="visually-hidden">Loading...</span>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -145,21 +162,47 @@ content %}
 <style>
   .crop-image {
     cursor: pointer;
-    transition: opacity 0.3s;
+    transition: all 0.3s ease;
   }
   .crop-image:hover {
     opacity: 0.9;
+    transform: scale(1.02);
+  }
+  #previewImage {
+    max-height: 80vh;
+    transition: opacity 0.3s ease;
+  }
+  #previewImage.loading {
+    opacity: 0.5;
   }
 </style>
 {% endblock %} {% block scripts %}
 <script>
   function openImagePreview(src, cropName) {
-    const modal = new bootstrap.Modal(
-      document.getElementById("imagePreviewModal")
-    );
-    document.getElementById("previewImage").src = src;
-    document.querySelector("#imagePreviewModal .modal-title").textContent =
-      cropName + " Image";
+    const modal = new bootstrap.Modal(document.getElementById("imagePreviewModal"));
+    const previewImg = document.getElementById("previewImage");
+    const spinner = document.getElementById("imageLoadingSpinner");
+
+    // Update modal title
+    document.querySelector("#imagePreviewModal .modal-title").textContent = cropName + " Image";
+
+    // Show loading state
+    previewImg.classList.add('loading');
+    spinner.classList.remove('d-none');
+
+    // Load new image
+    previewImg.onload = function() {
+      previewImg.classList.remove('loading');
+      spinner.classList.add('d-none');
+    };
+    previewImg.onerror = function() {
+      previewImg.classList.remove('loading');
+      spinner.classList.add('d-none');
+      this.src = '{{ url_for('static', filename='images/default-crop.jpg') }}';
+      this.style.opacity = 0.7;
+    };
+    previewImg.src = src;
+
     modal.show();
   }
 

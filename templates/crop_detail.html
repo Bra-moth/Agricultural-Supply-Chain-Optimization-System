@@ -14,7 +14,7 @@ endblock %} {% block content %}
     <!-- Crop Image and Basic Info -->
     <div class="col-md-5 mb-4">
       <div class="card shadow-sm">
-        {% if crop.image_path %}
+        {% if crop.image %}
         <img
           src="{{ crop.image_url }}"
           class="card-img-top crop-detail-image"
@@ -45,56 +45,65 @@ endblock %} {% block content %}
           </p>
         </div>
       </div>
-    </div>
 
-    <!-- Crop Details -->
-    <div class="col-md-7">
-      <div class="card shadow-sm mb-4">
+      <!-- Crop Details -->
+      <div class="card shadow-sm mt-4">
         <div class="card-header bg-light">
-          <h4 class="mb-0">Crop Information</h4>
+          <h4 class="mb-0">Crop Details</h4>
         </div>
         <div class="card-body">
-          <div class="row g-4">
-            <div class="col-sm-6">
+          <div class="row g-3">
+            <div class="col-6">
               <div class="detail-item">
                 <label class="text-muted">Quantity</label>
                 <h5>{{ crop.quantity }} {{ crop.unit }}</h5>
               </div>
             </div>
-            <div class="col-sm-6">
+            <div class="col-6">
               <div class="detail-item">
                 <label class="text-muted">Price per Unit</label>
-                <h5 class="text-success">
-                  R{{ crop.price_per_unit }}/{{ crop.unit }}
-                </h5>
+                <h5>R{{ crop.price_per_unit }}/{{ crop.unit }}</h5>
               </div>
             </div>
-            <div class="col-sm-6">
+            <div class="col-6">
               <div class="detail-item">
                 <label class="text-muted">Planting Date</label>
                 <h5>{{ crop.planting_date.strftime('%Y-%m-%d') }}</h5>
               </div>
             </div>
-            <div class="col-sm-6">
+            <div class="col-6">
               <div class="detail-item">
                 <label class="text-muted">Expected Harvest</label>
                 <h5>{{ crop.expected_harvest_date.strftime('%Y-%m-%d') }}</h5>
               </div>
             </div>
-            {% if crop.harvest_date %}
-            <div class="col-sm-6">
+            <div class="col-6">
               <div class="detail-item">
-                <label class="text-muted">Harvest Date</label>
-                <h5>{{ crop.harvest_date.strftime('%Y-%m-%d') }}</h5>
+                <label class="text-muted">Planting Season</label>
+                <h5>{{ crop.planting_season|title }}</h5>
               </div>
             </div>
-            {% endif %}
-            <div class="col-sm-6">
+            <div class="col-6">
+              <div class="detail-item">
+                <label class="text-muted">Yield per Acre</label>
+                <h5>{{ crop.yield_per_acre }} {{ crop.unit }}</h5>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Market Price -->
+      <div class="card shadow-sm mt-4">
+        <div class="card-header bg-light">
+          <h4 class="mb-0">Market Information</h4>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <div class="col-12">
               <div class="detail-item">
                 <label class="text-muted">Current Market Price</label>
-                <h5 class="text-success">
-                  R{{ market_price }}/{{ crop.unit }}
-                </h5>
+                <h5>R{{ market_price }}/{{ crop.unit }}</h5>
               </div>
             </div>
           </div>
@@ -102,7 +111,7 @@ endblock %} {% block content %}
       </div>
 
       <!-- Actions -->
-      <div class="card shadow-sm">
+      <div class="card shadow-sm mt-4">
         <div class="card-header bg-light">
           <h4 class="mb-0">Actions</h4>
         </div>
@@ -169,6 +178,12 @@ endblock %} {% block content %}
   }
   .detail-item h5 {
     margin-bottom: 0;
+  }
+  .crop-detail-image {
+    transition: opacity 0.3s;
+  }
+  .crop-detail-image:hover {
+    opacity: 0.9;
   }
 </style>
 {% endblock %} {% block scripts %}

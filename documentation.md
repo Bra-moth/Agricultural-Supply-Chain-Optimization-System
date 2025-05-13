@@ -3,15 +3,16 @@
 ## Table of Contents
 
 1. [Introduction](#introduction)
-2. [System Architecture](#system-architecture)
-3. [Database Design](#database-design)
-4. [User Roles and Permissions](#user-roles-and-permissions)
-5. [Core Features](#core-features)
-6. [Technical Implementation](#technical-implementation)
-7. [Security Measures](#security-measures)
-8. [Testing](#testing)
-9. [Deployment](#deployment)
-10. [Maintenance and Support](#maintenance-and-support)
+2. [User Account Creation](#user-account-creation)
+3. [System Architecture](#system-architecture)
+4. [Database Design](#database-design)
+5. [User Roles and Permissions](#user-roles-and-permissions)
+6. [Core Features](#core-features)
+7. [Technical Implementation](#technical-implementation)
+8. [Security Measures](#security-measures)
+9. [Testing](#testing)
+10. [Deployment](#deployment)
+11. [Maintenance and Support](#maintenance-and-support)
 
 ## 1. Introduction
 
@@ -36,10 +37,48 @@ The system covers the entire agricultural supply chain from crop planning to fin
 - Retailers
 - System Administrators
 
-## 2. System Architecture
+## 2. User Account Creation
 
-### 2.1 Technology Stack
+### 2.1 Registration Process
 
+The system provides a user-friendly registration process for new users:
+
+1. **Initial Access**
+
+   - Visit the registration page
+   - Select appropriate user role
+   - Fill in required information
+
+2. **Required Information**
+
+   - Username (4-25 characters, unique)
+   - Email address (valid format, unique)
+   - Password (minimum 6 characters)
+   - Role selection (Farmer/Distributor/Retailer)
+   - Location
+   - Role-specific details
+
+3. **Role-Specific Fields**
+   - Farmers: Farm size, farming type
+   - Distributors: Distribution capacity
+   - Retailers: Store location, business type
+
+### 2.2 Account Security
+
+- Password requirements:
+  - Minimum 6 characters
+  - Mix of uppercase and lowercase
+  - Numbers and special characters
+  - Password strength indicator
+- Email verification
+- Two-factor authentication (optional)
+
+### 2.3 Account Management
+
+- Profile customization
+- Password reset functionality
+- Account settings
+- Security preferences
 - **Backend Framework**: Flask 3.0.0
 - **Database**: SQLite with SQLAlchemy ORM
 - **Frontend**: Bootstrap 5, Chart.js
@@ -62,9 +101,78 @@ The system covers the entire agricultural supply chain from crop planning to fin
     └── Analytics Engine
 ```
 
-## 3. Database Design
+## 3. User Account Management
 
-### 3.1 Entity Relationship Diagram
+### 3.1 Registration Process
+
+Users can create new accounts through the registration system with the following steps:
+
+1. Access the registration page
+2. Choose user role (Farmer, Distributor, or Retailer)
+3. Provide required information:
+   - Username (unique)
+   - Email address (unique)
+   - Password (minimum 6 characters)
+   - Location
+   - Role-specific information:
+     - Farmers: Farm size
+     - Distributors: Distribution capacity
+     - Retailers: Store location
+
+### 3.2 Registration Form Validation
+
+```python
+class RegistrationForm(FlaskForm):
+    username = StringField('Username', validators=[
+        DataRequired(),
+        Length(min=4, max=25)
+    ])
+    email = StringField('Email', validators=[
+        DataRequired(),
+        Email()
+    ])
+    password = PasswordField('Password', validators=[
+        DataRequired(),
+        Length(min=6)
+    ])
+    role = SelectField('Role', choices=[
+        ('farmer', 'Farmer'),
+        ('distributor', 'Distributor'),
+        ('retailer', 'Retailer')
+    ])
+    location = StringField('Location', validators=[DataRequired()])
+```
+
+### 3.3 Password Requirements
+
+- Minimum 6 characters
+- Must contain at least:
+  - One uppercase letter
+  - One lowercase letter
+  - One number
+  - One special character
+- Password strength indicator
+- Secure password hashing using Werkzeug
+
+### 3.4 Account Verification
+
+1. Email verification process
+2. Role-specific verification:
+   - Farmers: Farm registration verification
+   - Distributors: Business license verification
+   - Retailers: Store verification
+
+### 3.5 Account Management Features
+
+- Password reset functionality
+- Profile updates
+- Account deactivation
+- Role-specific settings
+- Security settings management
+
+## 4. Database Design
+
+### 4.1 Entity Relationship Diagram
 
 Key entities and their relationships:
 
@@ -75,7 +183,7 @@ Key entities and their relationships:
 - Products
 - Deliveries
 
-### 3.2 Database Models
+### 4.2 Database Models
 
 ```python
 # Key Models
@@ -101,9 +209,9 @@ Order
 └── status
 ```
 
-## 4. User Roles and Permissions
+## 5. User Roles and Permissions
 
-### 4.1 Farmer Role
+### 5.1 Farmer Role
 
 - Manage crop inventory
 - Track planting and harvesting
@@ -111,7 +219,7 @@ Order
 - Process orders
 - Access analytics
 
-### 4.2 Distributor Role
+### 5.2 Distributor Role
 
 - Manage inventory
 - Process orders
@@ -119,7 +227,7 @@ Order
 - Update market prices
 - Access analytics
 
-### 4.3 Retailer Role
+### 5.3 Retailer Role
 
 - Browse available products
 - Place orders
@@ -127,23 +235,23 @@ Order
 - Access sales analytics
 - Manage inventory
 
-## 5. Core Features
+## 6. Core Features
 
-### 5.1 Crop Management
+### 6.1 Crop Management
 
 - Add/Edit crops
 - Track growth stages
 - Schedule harvests
 - Monitor inventory
 
-### 5.2 Order Processing
+### 6.2 Order Processing
 
 ```python
 # Order Status Flow
 Pending → Processing → In Transit → Delivered
 ```
 
-### 5.3 Analytics Dashboard
+### 6.3 Analytics Dashboard
 
 - Sales trends
 - Inventory levels
@@ -151,9 +259,9 @@ Pending → Processing → In Transit → Delivered
 - Delivery performance
 - Revenue analytics
 
-## 6. Technical Implementation
+## 7. Technical Implementation
 
-### 6.1 Authentication System
+### 7.1 Authentication System
 
 ```python
 @login_required
@@ -162,13 +270,13 @@ def farmer_dashboard():
     # Role-specific dashboard logic
 ```
 
-### 6.2 File Upload System
+### 7.2 File Upload System
 
 - Secure file handling
 - Image processing
 - Storage management
 
-### 6.3 API Endpoints
+### 7.3 API Endpoints
 
 ```python
 # Sample API Routes

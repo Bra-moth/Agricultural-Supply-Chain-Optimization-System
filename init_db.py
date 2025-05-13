@@ -72,6 +72,43 @@ def add_sample_data():
         db.session.commit()
         print("👥 Added sample users")
 
+        # Create sample crops with proper DateTime objects
+        crops = [
+            Crop(
+                name="Maize",
+                variety="Yellow Maize",
+                quantity=1000,
+                unit="kg",
+                planting_date=datetime.now() - timedelta(days=60),
+                expected_harvest_date=datetime.now() + timedelta(days=30),
+                status="growing",
+                description="Yellow maize variety, healthy growth",
+                farmer_id=users[0].id,
+                planting_season="spring",
+                harvest_period=90,
+                yield_per_acre=1000,
+                price_per_unit=150.0
+            ),
+            Crop(
+                name="Beans",
+                variety="Red Kidney",
+                quantity=500,
+                unit="kg",
+                planting_date=datetime.now() - timedelta(days=30),
+                expected_harvest_date=datetime.now() + timedelta(days=60),
+                status="growing",
+                description="Red kidney beans, organic farming",
+                farmer_id=users[0].id,
+                planting_season="summer",
+                harvest_period=90,
+                yield_per_acre=500,
+                price_per_unit=30.0
+            )
+        ]
+        db.session.add_all(crops)
+        db.session.commit()
+        print("🌾 Added sample crops")
+
         # Create sample products
         products = [
             Product(
@@ -96,43 +133,6 @@ def add_sample_data():
         db.session.add_all(products)
         db.session.commit()
         print("📦 Added sample products")
-
-        # Create sample crops
-        crops = [
-            Crop(
-                name="Maize",
-                variety="Yellow Maize",
-                quantity=1000,
-                unit="kg",
-                planting_date=datetime.utcnow() - timedelta(days=60),
-                expected_harvest_date=datetime.utcnow() + timedelta(days=30),
-                status="growing",
-                description="Yellow maize variety, healthy growth",
-                farmer_id=users[0].id,
-                planting_season="spring",
-                harvest_period=90,
-                yield_per_acre=1000,
-                price_per_unit=150.0
-            ),
-            Crop(
-                name="Beans",
-                variety="Red Kidney",
-                quantity=500,
-                unit="kg",
-                planting_date=datetime.utcnow() - timedelta(days=30),
-                expected_harvest_date=datetime.utcnow() + timedelta(days=30),
-                status="growing",
-                description="Red kidney beans, organic farming",
-                farmer_id=users[0].id,
-                planting_season="summer",
-                harvest_period=90,
-                yield_per_acre=500,
-                price_per_unit=30.0
-            )
-        ]
-        db.session.add_all(crops)
-        db.session.commit()
-        print("🌾 Added sample crops")
 
         # Create sample orders
         orders = [

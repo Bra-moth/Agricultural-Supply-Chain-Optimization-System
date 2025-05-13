@@ -1,160 +1,181 @@
 {% extends "base.html" %} {% block title %}Edit {{ crop.name }} - Agri-SCM{%
 endblock %} {% block content %}
 <div class="container py-4">
-  <nav aria-label="breadcrumb" class="mb-4">
-    <ol class="breadcrumb">
-      <li class="breadcrumb-item">
-        <a href="{{ url_for('crop_inventory') }}">Crop Inventory</a>
-      </li>
-      <li class="breadcrumb-item">
-        <a href="{{ url_for('crop_detail', crop_id=crop.id) }}"
-          >{{ crop.name }}</a
-        >
-      </li>
-      <li class="breadcrumb-item active">Edit</li>
-    </ol>
-  </nav>
-
   <div class="row justify-content-center">
     <div class="col-md-8">
-      <div class="card shadow-sm">
-        <div class="card-header bg-light">
-          <h4 class="mb-0">Edit Crop Details</h4>
+      <div class="card shadow">
+        <div class="card-header bg-success text-white">
+          <h3 class="mb-0">Edit Crop: {{ crop.name }}</h3>
         </div>
         <div class="card-body">
           <form method="POST" enctype="multipart/form-data">
-            {{ form.csrf_token }}
+            {{ form.hidden_tag() }}
 
             <div class="row g-3">
+              <!-- Crop Name -->
               <div class="col-md-6">
                 <div class="form-group">
                   {{ form.name.label(class="form-label") }} {{
-                  form.name(class="form-control") }} {% if form.name.errors %}
-                  {% for error in form.name.errors %}
-                  <span class="text-danger">{{ error }}</span>
-                  {% endfor %} {% endif %}
+                  form.name(class="form-control" + (" is-invalid" if
+                  form.name.errors else ""), value=crop.name) }} {% for error in
+                  form.name.errors %}
+                  <div class="invalid-feedback">{{ error }}</div>
+                  {% endfor %}
                 </div>
               </div>
 
+              <!-- Variety -->
               <div class="col-md-6">
                 <div class="form-group">
                   {{ form.variety.label(class="form-label") }} {{
-                  form.variety(class="form-control") }} {% if
-                  form.variety.errors %} {% for error in form.variety.errors %}
-                  <span class="text-danger">{{ error }}</span>
-                  {% endfor %} {% endif %}
+                  form.variety(class="form-control" + (" is-invalid" if
+                  form.variety.errors else ""), value=crop.variety) }} {% for
+                  error in form.variety.errors %}
+                  <div class="invalid-feedback">{{ error }}</div>
+                  {% endfor %}
                 </div>
               </div>
 
-              <div class="col-md-6">
-                <div class="form-group">
-                  {{ form.planting_season.label(class="form-label") }} {{
-                  form.planting_season(class="form-control") }} {% if
-                  form.planting_season.errors %} {% for error in
-                  form.planting_season.errors %}
-                  <span class="text-danger">{{ error }}</span>
-                  {% endfor %} {% endif %}
-                </div>
-              </div>
-
-              <div class="col-md-6">
-                <div class="form-group">
-                  {{ form.harvest_period.label(class="form-label") }} {{
-                  form.harvest_period(class="form-control") }} {% if
-                  form.harvest_period.errors %} {% for error in
-                  form.harvest_period.errors %}
-                  <span class="text-danger">{{ error }}</span>
-                  {% endfor %} {% endif %}
-                </div>
-              </div>
-
+              <!-- Quantity -->
               <div class="col-md-6">
                 <div class="form-group">
                   {{ form.quantity.label(class="form-label") }} {{
-                  form.quantity(class="form-control") }} {% if
-                  form.quantity.errors %} {% for error in form.quantity.errors
-                  %}
-                  <span class="text-danger">{{ error }}</span>
-                  {% endfor %} {% endif %}
+                  form.quantity(class="form-control" + (" is-invalid" if
+                  form.quantity.errors else ""), value=crop.quantity) }} {% for
+                  error in form.quantity.errors %}
+                  <div class="invalid-feedback">{{ error }}</div>
+                  {% endfor %}
                 </div>
               </div>
 
+              <!-- Unit -->
               <div class="col-md-6">
                 <div class="form-group">
                   {{ form.unit.label(class="form-label") }} {{
-                  form.unit(class="form-control") }} {% if form.unit.errors %}
-                  {% for error in form.unit.errors %}
-                  <span class="text-danger">{{ error }}</span>
-                  {% endfor %} {% endif %}
+                  form.unit(class="form-select" + (" is-invalid" if
+                  form.unit.errors else "")) }} {% for error in form.unit.errors
+                  %}
+                  <div class="invalid-feedback">{{ error }}</div>
+                  {% endfor %}
                 </div>
               </div>
 
+              <!-- Planting Date -->
               <div class="col-md-6">
                 <div class="form-group">
-                  {{ form.price_per_unit.label(class="form-label") }} {{
-                  form.price_per_unit(class="form-control") }} {% if
-                  form.price_per_unit.errors %} {% for error in
-                  form.price_per_unit.errors %}
-                  <span class="text-danger">{{ error }}</span>
-                  {% endfor %} {% endif %}
+                  {{ form.planting_date.label(class="form-label") }} {{
+                  form.planting_date(class="form-control" + (" is-invalid" if
+                  form.planting_date.errors else ""), type="date") }} {% for
+                  error in form.planting_date.errors %}
+                  <div class="invalid-feedback">{{ error }}</div>
+                  {% endfor %}
                 </div>
               </div>
 
+              <!-- Expected Harvest Date -->
+              <div class="col-md-6">
+                <div class="form-group">
+                  {{ form.expected_harvest_date.label(class="form-label") }} {{
+                  form.expected_harvest_date(class="form-control" + ("
+                  is-invalid" if form.expected_harvest_date.errors else ""),
+                  type="date") }} {% for error in
+                  form.expected_harvest_date.errors %}
+                  <div class="invalid-feedback">{{ error }}</div>
+                  {% endfor %}
+                </div>
+              </div>
+
+              <!-- Planting Season -->
+              <div class="col-md-6">
+                <div class="form-group">
+                  {{ form.planting_season.label(class="form-label") }} {{
+                  form.planting_season(class="form-select" + (" is-invalid" if
+                  form.planting_season.errors else "")) }} {% for error in
+                  form.planting_season.errors %}
+                  <div class="invalid-feedback">{{ error }}</div>
+                  {% endfor %}
+                </div>
+              </div>
+
+              <!-- Harvest Period -->
+              <div class="col-md-6">
+                <div class="form-group">
+                  {{ form.harvest_period.label(class="form-label") }} {{
+                  form.harvest_period(class="form-control" + (" is-invalid" if
+                  form.harvest_period.errors else ""),
+                  value=crop.harvest_period) }} {% for error in
+                  form.harvest_period.errors %}
+                  <div class="invalid-feedback">{{ error }}</div>
+                  {% endfor %}
+                </div>
+              </div>
+
+              <!-- Yield per Acre -->
               <div class="col-md-6">
                 <div class="form-group">
                   {{ form.yield_per_acre.label(class="form-label") }} {{
-                  form.yield_per_acre(class="form-control") }} {% if
-                  form.yield_per_acre.errors %} {% for error in
+                  form.yield_per_acre(class="form-control" + (" is-invalid" if
+                  form.yield_per_acre.errors else ""),
+                  value=crop.yield_per_acre) }} {% for error in
                   form.yield_per_acre.errors %}
-                  <span class="text-danger">{{ error }}</span>
-                  {% endfor %} {% endif %}
+                  <div class="invalid-feedback">{{ error }}</div>
+                  {% endfor %}
                 </div>
               </div>
 
+              <!-- Price per Unit -->
+              <div class="col-md-6">
+                <div class="form-group">
+                  {{ form.price_per_unit.label(class="form-label") }} {{
+                  form.price_per_unit(class="form-control" + (" is-invalid" if
+                  form.price_per_unit.errors else ""),
+                  value=crop.price_per_unit) }} {% for error in
+                  form.price_per_unit.errors %}
+                  <div class="invalid-feedback">{{ error }}</div>
+                  {% endfor %}
+                </div>
+              </div>
+
+              <!-- Description -->
               <div class="col-12">
                 <div class="form-group">
                   {{ form.description.label(class="form-label") }} {{
-                  form.description(class="form-control", rows=3) }} {% if
-                  form.description.errors %} {% for error in
+                  form.description(class="form-control" + (" is-invalid" if
+                  form.description.errors else ""), rows="3") }} {% for error in
                   form.description.errors %}
-                  <span class="text-danger">{{ error }}</span>
-                  {% endfor %} {% endif %}
+                  <div class="invalid-feedback">{{ error }}</div>
+                  {% endfor %}
                 </div>
               </div>
 
+              <!-- Image Upload -->
               <div class="col-12">
                 <div class="form-group">
-                  {{ form.image.label(class="form-label") }} {% if
-                  crop.image_path %}
+                  {{ form.image.label(class="form-label") }} {% if crop.image %}
                   <div class="mb-2">
                     <img
-                      src="{{ url_for('static', filename='uploads/' + crop.image_path) }}"
+                      src="{{ crop.image_url }}"
                       alt="{{ crop.name }}"
                       class="img-thumbnail"
-                      style="max-height: 100px"
+                      style="max-height: 200px"
                     />
-                    <small class="text-muted d-block"
-                      >Current image. Upload a new one to replace it.</small
-                    >
                   </div>
-                  {% endif %} {{ form.image(class="form-control") }} {% if
-                  form.image.errors %} {% for error in form.image.errors %}
-                  <span class="text-danger">{{ error }}</span>
-                  {% endfor %} {% endif %}
+                  {% endif %} {{ form.image(class="form-control" + ("
+                  is-invalid" if form.image.errors else "")) }} {% for error in
+                  form.image.errors %}
+                  <div class="invalid-feedback">{{ error }}</div>
+                  {% endfor %}
                 </div>
               </div>
             </div>
 
             <div class="mt-4">
-              <button type="submit" class="btn btn-primary">
-                <i class="bi bi-check-lg me-2"></i>Save Changes
-              </button>
+              {{ form.submit(class="btn btn-success") }}
               <a
-                href="{{ url_for('crop_detail', crop_id=crop.id) }}"
+                href="{{ url_for('crop_inventory') }}"
                 class="btn btn-secondary"
+                >Cancel</a
               >
-                <i class="bi bi-x-lg me-2"></i>Cancel
-              </a>
             </div>
           </form>
         </div>
@@ -162,4 +183,26 @@ endblock %} {% block content %}
     </div>
   </div>
 </div>
+{% endblock %} {% block scripts %}
+<script>
+  // Initialize date fields with the correct format
+  document.addEventListener("DOMContentLoaded", function () {
+    const plantingDate = new Date("{{ crop.planting_date }}");
+    const expectedHarvestDate = new Date("{{ crop.expected_harvest_date }}");
+
+    document.querySelector("#planting_date").value = plantingDate
+      .toISOString()
+      .split("T")[0];
+    document.querySelector("#expected_harvest_date").value = expectedHarvestDate
+      .toISOString()
+      .split("T")[0];
+
+    // Set the planting season
+    document.querySelector("#planting_season").value =
+      "{{ crop.planting_season }}";
+
+    // Set the unit
+    document.querySelector("#unit").value = "{{ crop.unit }}";
+  });
+</script>
 {% endblock %}

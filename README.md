@@ -168,6 +168,6 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 For support, please contact:
 
-- Email: support@agri-scm.com
-- Phone: +27 123 456 789
+- Email: makuwasolomon6@gmail.com
+- Phone: +27 765 532 9997
 - Location: Kimberley, Northern Cape, South Africa
